@@ -20,14 +20,29 @@ func main() {
 		}(v)
 	}
 
+	go func() {
+		wg1.Wait()
+		close(out)
+	}()
+
+	wg2.Add(len(sl))
 	for range out {
 		go func() {
-			in <- power(<-out)
+			defer wg2.Done()
+			value := <-in
+			squared := power(value)
+			fmt.Printf("Обработка: %d^2 = %d\n", value, squared)
 		}()
 	}
 
-	for range in {
-		fmt.Printf("value is: %d\n", <-in)
+	go func() {
+		wg2.Wait()
+		close(in)
+	}()
+
+	fmt.Println("\nFinal Results:")
+	for value := range in {
+		fmt.Printf("value is: %d\n", value)
 	}
 }
 
