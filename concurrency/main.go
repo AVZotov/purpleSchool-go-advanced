@@ -14,10 +14,14 @@ func main() {
 	sendValues(in, &wg)
 	processValues(in, out, &wg)
 
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
 	for v := range out {
 		fmt.Printf("Result: %d\n", v)
 	}
-	wg.Wait()
 }
 
 func sendValues(ch chan<- int, wg *sync.WaitGroup) {
@@ -35,7 +39,6 @@ func sendValues(ch chan<- int, wg *sync.WaitGroup) {
 func processValues(chIn <-chan int, chOut chan<- int, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		defer close(chOut)
 		defer wg.Done()
 		for value := range chIn {
 			square := power(value)
