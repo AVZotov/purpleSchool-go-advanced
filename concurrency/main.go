@@ -3,16 +3,21 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 )
 
 func main() {
 	in := make(chan int)
 	out := make(chan int)
 	sl := getSlice()
+	var wg1, wg2 sync.WaitGroup
+
+	wg1.Add(len(sl))
 	for _, v := range sl {
-		go func() {
-			out <- v
-		}()
+		go func(value int) {
+			defer wg1.Done()
+			out <- value
+		}(v)
 	}
 
 	for range out {
