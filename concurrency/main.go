@@ -16,32 +16,33 @@ func main() {
 	for _, v := range sl {
 		go func(value int) {
 			defer wg1.Done()
-			out <- value
+			in <- value
 		}(v)
 	}
 
 	go func() {
 		wg1.Wait()
-		close(out)
+		close(in)
 	}()
 
 	wg2.Add(len(sl))
-	for range out {
+	for range in {
 		go func() {
 			defer wg2.Done()
 			value := <-in
 			squared := power(value)
 			fmt.Printf("Обработка: %d^2 = %d\n", value, squared)
+			out <- squared
 		}()
 	}
 
 	go func() {
 		wg2.Wait()
-		close(in)
+		close(out)
 	}()
 
 	fmt.Println("\nFinal Results:")
-	for value := range in {
+	for value := range out {
 		fmt.Printf("value is: %d\n", value)
 	}
 }
