@@ -26,10 +26,9 @@ func main() {
 	}()
 
 	wg2.Add(len(sl))
-	for range in {
+	for value := range in {
 		go func() {
 			defer wg2.Done()
-			value := <-in
 			squared := power(value)
 			fmt.Printf("Обработка: %d^2 = %d\n", value, squared)
 			out <- squared
