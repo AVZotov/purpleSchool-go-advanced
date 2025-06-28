@@ -9,26 +9,46 @@ import (
 func main() {
 	in := make(chan int)
 	out := make(chan int)
-	sl := getSlice()
-	var wg1, wg2 sync.WaitGroup
+	var wg sync.WaitGroup
 
-	wg1.Add(len(sl))
-	for _, v := range sl {
-		go func(value int) {
-			defer wg1.Done()
-			out <- value
-		}(v)
-	}
+	sendValues(in, &wg)
+	processValues(in, out, &wg)
 
-	for range out {
-		go func() {
-			in <- power(<-out)
-		}()
-	}
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
 
-	for range in {
-		fmt.Printf("value is: %d\n", <-in)
+	for v := range out {
+		fmt.Printf("Result: %d\n", v)
 	}
+}
+
+func sendValues(ch chan<- int, wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer close(ch)
+		defer wg.Done()
+		sl := getSlice()
+		for _, v := range sl {
+			ch <- v
+		}
+	}()
+}
+
+func processValues(chIn <-chan int, chOut chan<- int, wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for value := range chIn {
+			square := power(value)
+			chOut <- square
+		}
+	}()
+}
+
+func power(value int) int {
+	return value * value
 }
 
 func getSlice() []int {
@@ -38,8 +58,4 @@ func getSlice() []int {
 		sl = append(sl, val)
 	}
 	return sl
-}
-
-func power(value int) int {
-	return value * value
 }
