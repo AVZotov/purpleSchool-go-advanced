@@ -3,47 +3,42 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"sync"
 )
 
 func main() {
 	in := make(chan int)
 	out := make(chan int)
-	sl := getSlice()
-	var wg1, wg2 sync.WaitGroup
 
-	wg1.Add(len(sl))
-	for _, v := range sl {
-		go func(value int) {
-			defer wg1.Done()
-			in <- value
-		}(v)
+	sendValues(in)
+	processValues(in, out)
+
+	for v := range out {
+		fmt.Printf("Result: %d\n", v)
 	}
+}
 
+func sendValues(ch chan<- int) {
 	go func() {
-		wg1.Wait()
-		close(in)
+		defer close(ch)
+		sl := getSlice()
+		for _, v := range sl {
+			ch <- v
+		}
 	}()
+}
 
-	wg2.Add(len(sl))
-	for value := range in {
-		go func(val int) {
-			defer wg2.Done()
-			squared := power(val)
-			fmt.Printf("Обработка: %d^2 = %d\n", value, squared)
-			out <- squared
-		}(value)
-	}
-
+func processValues(chIn <-chan int, chOut chan<- int) {
 	go func() {
-		wg2.Wait()
-		close(out)
+		defer close(chOut)
+		for value := range chIn {
+			square := power(value)
+			chOut <- square
+		}
 	}()
+}
 
-	fmt.Println("\nFinal Results:")
-	for value := range out {
-		fmt.Printf("value is: %d\n", value)
-	}
+func power(value int) int {
+	return value * value
 }
 
 func getSlice() []int {
@@ -53,8 +48,4 @@ func getSlice() []int {
 		sl = append(sl, val)
 	}
 	return sl
-}
-
-func power(value int) int {
-	return value * value
 }
