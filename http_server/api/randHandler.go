@@ -2,6 +2,7 @@ package api
 
 import (
 	"http_server/utils"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -14,7 +15,7 @@ func (*RandHandler) rand() http.HandlerFunc {
 		payload := strconv.Itoa(utils.RandomInt())
 		_, err := w.Write([]byte(payload))
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("Error writing response: %v", err)
 		}
 		return
 	}
