@@ -1,13 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"http_server/utils"
+	"http_server/api"
+	"log"
 )
 
 func main() {
-	fmt.Println("Starting server")
-	for i := 0; i < 30; i++ {
-		fmt.Println(utils.RandomInt())
+	server := api.NewServer("8081")
+	err := server.ListenAndServe()
+	if err != nil {
+		log.Fatalln(err.Error())
 	}
 }

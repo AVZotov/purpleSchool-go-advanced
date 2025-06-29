@@ -1,0 +1,19 @@
+package api
+
+import "net/http"
+
+type Server struct {
+	Addr   string
+	Router *http.ServeMux
+}
+
+func NewServer(port string) *Server {
+	return &Server{
+		Addr:   ":" + port,
+		Router: newRouter(),
+	}
+}
+
+func (s *Server) ListenAndServe() error {
+	return s.ListenAndServe()
+}
