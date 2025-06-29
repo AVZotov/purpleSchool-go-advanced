@@ -15,5 +15,9 @@ func NewServer(port string) *Server {
 }
 
 func (s *Server) ListenAndServe() error {
-	return s.ListenAndServe()
+	server := &http.Server{
+		Addr:    s.Addr,
+		Handler: s.Router,
+	}
+	return server.ListenAndServe()
 }
