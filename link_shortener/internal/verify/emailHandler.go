@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/smtp"
-	"strings"
+	"regexp"
 	"time"
 )
 
@@ -149,15 +149,7 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 	return e.Send(handler.Address, auth)
 }
 
-//func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		resp.Json(w, http.StatusOK, map[string]string{
-//			"status":  "OK",
-//			"service": "link_shortener email service",
-//		})
-//	}
-//}
-
-func isValidEmail(targetEmail string) bool {
-	return strings.Contains(targetEmail, "@")
+func isValidEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
 }
