@@ -2,8 +2,10 @@ package verify
 
 import (
 	"fmt"
-	_ "github.com/jordan-wright/email"
+	"github.com/jordan-wright/email"
+	"log"
 	"net/http"
+	"net/smtp"
 )
 
 type Config struct {
@@ -16,11 +18,11 @@ type Handler struct {
 }
 
 type Configs interface {
-	GetEmailConfig() *map[string]string
+	GetGmailSecrets() *map[string]string
 }
 
 func NewEmailHandler(router *http.ServeMux, config Configs) {
-	cfgMap := *config.GetEmailConfig()
+	cfgMap := *config.GetGmailSecrets()
 	handler := &Handler{
 		Config{
 			Email:    cfgMap["email"],
@@ -28,13 +30,25 @@ func NewEmailHandler(router *http.ServeMux, config Configs) {
 			Address:  cfgMap["address"],
 		},
 	}
-	router.HandleFunc("POST /email/send", handler.send())
-	router.HandleFunc("GET /email/verify/{hash}", handler.verify())
+	router.HandleFunc("POST /send", handler.send())
+	router.HandleFunc("GET /verify/{hash}", handler.verify())
 }
 
 func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("sending message")
+		sender := "Alexey Zotov"
+		from := fmt.Sprintf("%s <%s>", sender, handler.Email)
+		e := email.NewEmail()
+		e.From = from
+		e.To = []string{handler.Email}
+		e.Bcc = []string{}
+		e.Cc = []string{}
+		e.Subject = "Awesome Subject"
+		e.Text = []byte("Text Body is, of course, supported!")
+		err := e.Send("smtp.gmail.com:587", smtp.PlainAuth("", handler.Email, handler.Password, handler.Address))
+		if err != nil {
+			log.Println(err.Error())
+		}
 	}
 }
 func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {

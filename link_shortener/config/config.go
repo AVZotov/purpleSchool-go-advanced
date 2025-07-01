@@ -1,7 +1,7 @@
 package config
 
 type Config struct {
-	EmailConfig *EmailConfig
+	EmailConfig *EmailSecrets
 }
 
 func NewConfig() (*Config, error) {
@@ -14,10 +14,10 @@ func NewConfig() (*Config, error) {
 	}, nil
 }
 
-func (c *Config) GetEmailConfig() *map[string]string {
+func (c *Config) GetGmailSecrets() *map[string]string {
 	return &map[string]string{
 		"email":    c.EmailConfig.Email,
 		"password": c.EmailConfig.Password,
-		"address":  c.EmailConfig.Email,
+		"address":  c.EmailConfig.Address,
 	}
 }

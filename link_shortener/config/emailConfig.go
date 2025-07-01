@@ -7,13 +7,13 @@ import (
 	"os"
 )
 
-type EmailConfig struct {
+type EmailSecrets struct {
 	Email    string
 	Password string
 	Address  string
 }
 
-func newEmailConfig() (_ *EmailConfig, err error) {
+func newEmailConfig() (_ *EmailSecrets, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("error in 'newEmailConfig': %w", err)
@@ -23,7 +23,8 @@ func newEmailConfig() (_ *EmailConfig, err error) {
 	if err != nil {
 		return nil, err
 	}
-	config := EmailConfig{Email: os.Getenv("E_EMAIL"), Password: os.Getenv("E_PASSWORD")}
+	config := EmailSecrets{Email: os.Getenv("GMAIL_EMAIL"),
+		Password: os.Getenv("GMAIL_PASSWORD"), Address: os.Getenv("GMAIL_ADDRESS")}
 	err = validateConfig(&config)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func newEmailConfig() (_ *EmailConfig, err error) {
 	return &config, nil
 }
 
-func validateConfig(config *EmailConfig) (err error) {
+func validateConfig(config *EmailSecrets) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("error in 'validateConfig': %w", err)
@@ -43,6 +44,9 @@ func validateConfig(config *EmailConfig) (err error) {
 	}
 	if config.Password == "" {
 		errs = append(errs, errors.New("'password' parameter can't be empty"))
+	}
+	if config.Address == "" {
+		errs = append(errs, errors.New("'address' parameter can't be empty"))
 	}
 	if len(errs) > 0 {
 		return errors.Join(errs...)
