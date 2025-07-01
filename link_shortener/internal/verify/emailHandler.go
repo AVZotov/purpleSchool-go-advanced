@@ -68,7 +68,9 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Failed to send email: %v", err)
 			resp.Json(w, http.StatusInternalServerError, map[string]string{
-				"error": "Failed to send verification email"})
+				"error":   "Failed to send verification email",
+				"details": err.Error(),
+			})
 			return
 		}
 		resp.Json(w, http.StatusOK, map[string]interface{}{
@@ -128,7 +130,7 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 
 	auth := smtp.PlainAuth("", handler.Email,
 		handler.Password, "smtp.gmail.com")
-	return e.Send(handler.Address, auth)
+	return e.Send("smtp.gmail.com:587", auth)
 }
 
 func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {
