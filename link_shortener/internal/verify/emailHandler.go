@@ -2,7 +2,6 @@ package verify
 
 import (
 	"crypto/md5"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/jordan-wright/email"
@@ -44,7 +43,6 @@ func NewEmailHandler(router *http.ServeMux, config Configs) {
 
 	router.HandleFunc("POST /send", handler.send())
 	router.HandleFunc("GET /verify/{hash}", handler.verify())
-	router.HandleFunc("GET /health", handler.health())
 }
 
 func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
@@ -52,12 +50,17 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 
 		var emailReq EmailRequest
 		if err := json.NewDecoder(r.Body).Decode(&emailReq); err != nil {
-			emailReq.Email = handler.EmailSecrets.Email
+			resp.Json(w, http.StatusBadRequest, map[string]string{
+				"error":   "Failed to parse request body for email",
+				"details": err.Error(),
+			})
 		}
 
 		targetEmail := emailReq.Email
 		if targetEmail == "" {
-			targetEmail = handler.EmailSecrets.Email
+			resp.Json(w, http.StatusBadRequest, map[string]string{
+				"error": "No email address provided",
+			})
 		}
 
 		verificationHash := handler.generateVerificationHash(targetEmail)
@@ -67,7 +70,6 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			verificationLink)
 		err := handler.sendEmail(targetEmail, subject, body)
 		if err != nil {
-			log.Printf("Failed to send email: %v", err)
 			resp.Json(w, http.StatusInternalServerError, map[string]string{
 				"error":   "Failed to send verification email",
 				"details": err.Error(),
@@ -75,9 +77,8 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resp.Json(w, http.StatusOK, map[string]interface{}{
-			"message":           "Verification email sent successfully",
-			"email":             targetEmail,
-			"verification_link": verificationLink,
+			"message": "Verification email sent successfully",
+			"email":   targetEmail,
 		})
 	}
 }
@@ -122,12 +123,7 @@ func (handler *Handler) generateVerificationHash(email string) string {
 
 func (handler *Handler) sendEmail(to, subject, body string) error {
 
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
-		ServerName:         "smtp.gmail.com",
-	}
-
-	sender := "Alexey Zotov"
+	sender := "Link shortener"
 	from := fmt.Sprintf("%s <%s>", sender, handler.Email)
 
 	e := email.NewEmail()
@@ -136,9 +132,8 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 	e.Subject = subject
 	e.Text = []byte(body)
 
-	return e.SendWithTLS("smtp.gmail.com:587",
-		smtp.PlainAuth("", handler.Email, handler.Password, "smtp.gmail.com"),
-		tlsConfig)
+	auth := smtp.PlainAuth("", handler.Email, handler.Password, "smtp.gmail.com")
+	return e.Send(handler.Address, auth)
 }
 
 func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"link_shortener/config"
+	"link_shortener/internal/verify"
 	"link_shortener/pkg"
 	"log"
 	"net/http"
@@ -22,5 +23,5 @@ func main() {
 }
 
 func registerHandlers(router *http.ServeMux, config *config.Config) {
-	pkg.NewEmailHandler(router, config)
+	verify.NewEmailHandler(router, config)
 }
