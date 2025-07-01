@@ -1,20 +1,24 @@
 package verify
 
 import (
+	"crypto/md5"
 	"fmt"
 	"github.com/jordan-wright/email"
+	"link_shortener/pkg/resp"
 	"log"
 	"net/http"
 	"net/smtp"
+	"time"
 )
 
-type Config struct {
+type EmailSecrets struct {
 	Email    string
 	Password string
 	Address  string
 }
 type Handler struct {
-	Config
+	EmailSecrets
+	verificationHashes map[string]bool
 }
 
 type Configs interface {
@@ -24,11 +28,12 @@ type Configs interface {
 func NewEmailHandler(router *http.ServeMux, config Configs) {
 	cfgMap := *config.GetGmailSecrets()
 	handler := &Handler{
-		Config{
+		EmailSecrets: EmailSecrets{
 			Email:    cfgMap["email"],
 			Password: cfgMap["password"],
 			Address:  cfgMap["address"],
 		},
+		verificationHashes: make(map[string]bool),
 	}
 	router.HandleFunc("POST /send", handler.send())
 	router.HandleFunc("GET /verify/{hash}", handler.verify())
@@ -36,35 +41,75 @@ func NewEmailHandler(router *http.ServeMux, config Configs) {
 
 func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sender := "Alexey Zotov"
-		from := fmt.Sprintf("%s <%s>", sender, handler.Email)
-		e := email.NewEmail()
-		e.From = from
-		e.To = []string{handler.Email}
-		e.Bcc = []string{}
-		e.Cc = []string{}
-		e.Subject = "Awesome Subject"
-		e.Text = []byte("Text Body is, of course, supported!")
-		err := e.Send("smtp.gmail.com:587", smtp.PlainAuth("", handler.Email, handler.Password, handler.Address))
+		targetEmail := handler.EmailSecrets.Email
+		verificationHash := handler.generateVerificationHash(targetEmail)
+		verificationLink := fmt.Sprintf("http://localhost:8081/verify/%s", verificationHash)
+		subject := "Email Verification Required"
+		body := fmt.Sprintf("Please verify your email by clicking the following link:\n%s",
+			verificationLink)
+		err := handler.sendEmail(targetEmail, subject, body)
 		if err != nil {
-			log.Println(err.Error())
+			log.Printf("Failed to send email: %v", err)
+			resp.Json(w, http.StatusInternalServerError, map[string]string{
+				"error": "Failed to send verification email"})
+			return
 		}
+		resp.Json(w, http.StatusOK, map[string]interface{}{
+			"message": "Verification email sent successfully",
+			"email":   targetEmail,
+		})
 	}
 }
 func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sender := "Alexey Zotov"
-		from := fmt.Sprintf("%s <%s>", sender, handler.Email)
-		e := email.NewEmail()
-		e.From = from
-		e.To = []string{handler.Email}
-		e.Bcc = []string{}
-		e.Cc = []string{}
-		e.Subject = "Awesome Subject"
-		e.Text = []byte("Text Body is, of course, supported!")
-		err := e.Send("smtp.gmail.com:587", smtp.PlainAuth("", handler.Email, handler.Password, handler.Address))
-		if err != nil {
-			log.Println(err.Error())
+		hash := r.PathValue("hash")
+		if hash == "" {
+			resp.Json(w, http.StatusBadRequest, map[string]string{
+				"error": "Verification hash is required",
+			})
+			return
 		}
+		if !handler.verificationHashes[hash] {
+			resp.Json(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid or expired verification hash",
+			})
+			return
+		}
+		delete(handler.verificationHashes, hash)
+
+		subject := "Email Verified Successfully"
+		body := "Your email has been successfully verified. Thank you!"
+
+		err := handler.sendEmail(handler.Email, subject, body)
+		if err != nil {
+			log.Printf("Failed to send confirmation email: %v", err)
+		}
+
+		resp.Json(w, http.StatusOK, map[string]interface{}{
+			"message": "Email verified successfully",
+			"hash":    hash,
+		})
 	}
+}
+
+func (handler *Handler) generateVerificationHash(email string) string {
+	data := fmt.Sprintf("%s-%d", email, time.Now().Unix())
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(data)))
+	handler.verificationHashes[hash] = true
+	return hash
+}
+
+func (handler *Handler) sendEmail(to, subject, body string) error {
+	sender := "Alexey Zotov"
+	from := fmt.Sprintf("%s <%s>", sender, handler.Email)
+
+	e := email.NewEmail()
+	e.From = from
+	e.To = []string{to}
+	e.Subject = subject
+	e.Text = []byte(body)
+
+	auth := smtp.PlainAuth("", handler.Email,
+		handler.Password, "smtp.gmail.com")
+	return e.Send(handler.Address, auth)
 }
