@@ -2,6 +2,7 @@ package verify
 
 import (
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/jordan-wright/email"
@@ -74,8 +75,9 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resp.Json(w, http.StatusOK, map[string]interface{}{
-			"message": "Verification email sent successfully",
-			"email":   targetEmail,
+			"message":           "Verification email sent successfully",
+			"email":             targetEmail,
+			"verification_link": verificationLink,
 		})
 	}
 }
@@ -119,6 +121,12 @@ func (handler *Handler) generateVerificationHash(email string) string {
 }
 
 func (handler *Handler) sendEmail(to, subject, body string) error {
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+		ServerName:         "smtp.gmail.com",
+	}
+
 	sender := "Alexey Zotov"
 	from := fmt.Sprintf("%s <%s>", sender, handler.Email)
 
@@ -128,9 +136,9 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 	e.Subject = subject
 	e.Text = []byte(body)
 
-	auth := smtp.PlainAuth("", handler.Email,
-		handler.Password, "smtp.gmail.com")
-	return e.Send("smtp.gmail.com:587", auth)
+	return e.SendWithTLS("smtp.gmail.com:587",
+		smtp.PlainAuth("", handler.Email, handler.Password, "smtp.gmail.com"),
+		tlsConfig)
 }
 
 func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {
