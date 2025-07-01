@@ -2,8 +2,8 @@ package main
 
 import (
 	"link_shortener/config"
-	"link_shortener/internal/system"
-	"link_shortener/internal/verify"
+	"link_shortener/internal/handlers/system"
+	"link_shortener/internal/handlers/verify"
 	"link_shortener/pkg"
 	"log"
 	"net/http"
