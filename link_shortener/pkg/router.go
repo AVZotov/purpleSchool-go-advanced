@@ -5,7 +5,7 @@ import (
 )
 
 type Config interface {
-	GetEmailConfig() map[string]string
+	GetGmailSecrets() *map[string]string
 }
 
 func NewRouter() *http.ServeMux {

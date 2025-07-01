@@ -2,6 +2,7 @@ package verify
 
 import (
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"github.com/jordan-wright/email"
 	"link_shortener/pkg/resp"
@@ -21,6 +22,10 @@ type Handler struct {
 	verificationHashes map[string]bool
 }
 
+type EmailRequest struct {
+	Email string `json:"email"`
+}
+
 type Configs interface {
 	GetGmailSecrets() *map[string]string
 }
@@ -35,13 +40,25 @@ func NewEmailHandler(router *http.ServeMux, config Configs) {
 		},
 		verificationHashes: make(map[string]bool),
 	}
+
 	router.HandleFunc("POST /send", handler.send())
 	router.HandleFunc("GET /verify/{hash}", handler.verify())
+	router.HandleFunc("GET /health", handler.health())
 }
 
 func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		targetEmail := handler.EmailSecrets.Email
+
+		var emailReq EmailRequest
+		if err := json.NewDecoder(r.Body).Decode(&emailReq); err != nil {
+			emailReq.Email = handler.EmailSecrets.Email
+		}
+
+		targetEmail := emailReq.Email
+		if targetEmail == "" {
+			targetEmail = handler.EmailSecrets.Email
+		}
+
 		verificationHash := handler.generateVerificationHash(targetEmail)
 		verificationLink := fmt.Sprintf("http://localhost:8081/verify/%s", verificationHash)
 		subject := "Email Verification Required"
@@ -112,4 +129,13 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 	auth := smtp.PlainAuth("", handler.Email,
 		handler.Password, "smtp.gmail.com")
 	return e.Send(handler.Address, auth)
+}
+
+func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp.Json(w, http.StatusOK, map[string]string{
+			"status":  "OK",
+			"service": "link_shortener email service",
+		})
+	}
 }
