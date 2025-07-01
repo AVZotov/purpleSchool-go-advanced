@@ -53,6 +53,18 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 }
 func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("verify message")
+		sender := "Alexey Zotov"
+		from := fmt.Sprintf("%s <%s>", sender, handler.Email)
+		e := email.NewEmail()
+		e.From = from
+		e.To = []string{handler.Email}
+		e.Bcc = []string{}
+		e.Cc = []string{}
+		e.Subject = "Awesome Subject"
+		e.Text = []byte("Text Body is, of course, supported!")
+		err := e.Send("smtp.gmail.com:587", smtp.PlainAuth("", handler.Email, handler.Password, handler.Address))
+		if err != nil {
+			log.Println(err.Error())
+		}
 	}
 }
