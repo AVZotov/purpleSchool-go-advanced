@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/smtp"
+	"strings"
 	"time"
 )
 
@@ -51,16 +52,25 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 		var emailReq EmailRequest
 		if err := json.NewDecoder(r.Body).Decode(&emailReq); err != nil {
 			resp.Json(w, http.StatusBadRequest, map[string]string{
-				"error":   "Failed to parse request body for email",
-				"details": err.Error(),
+				"error":   "Invalid JSON format",
+				"details": "Request body must contain valid JSON with 'email' field",
 			})
+			return
 		}
 
 		targetEmail := emailReq.Email
 		if targetEmail == "" {
 			resp.Json(w, http.StatusBadRequest, map[string]string{
-				"error": "No email address provided",
+				"error": "Email address is required",
 			})
+			return
+		}
+
+		if !isValidEmail(targetEmail) {
+			resp.Json(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid email format",
+			})
+			return
 		}
 
 		verificationHash := handler.generateVerificationHash(targetEmail)
@@ -76,12 +86,15 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+
 		resp.Json(w, http.StatusOK, map[string]interface{}{
-			"message": "Verification email sent successfully",
-			"email":   targetEmail,
+			"message":           "Verification email sent successfully",
+			"email":             targetEmail,
+			"verification_link": verificationLink,
 		})
 	}
 }
+
 func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hash := r.PathValue("hash")
@@ -136,11 +149,15 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 	return e.Send(handler.Address, auth)
 }
 
-func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resp.Json(w, http.StatusOK, map[string]string{
-			"status":  "OK",
-			"service": "link_shortener email service",
-		})
-	}
+//func (handler *Handler) health() func(w http.ResponseWriter, r *http.Request) {
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		resp.Json(w, http.StatusOK, map[string]string{
+//			"status":  "OK",
+//			"service": "link_shortener email service",
+//		})
+//	}
+//}
+
+func isValidEmail(targetEmail string) bool {
+	return strings.Contains(targetEmail, "@")
 }
