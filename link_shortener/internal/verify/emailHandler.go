@@ -20,11 +20,16 @@ type EmailSecrets struct {
 }
 type Handler struct {
 	EmailSecrets
-	verificationHashes map[string]bool
+	verificationHashes map[string]VerificationData
 }
 
 type EmailRequest struct {
 	Email string `json:"email"`
+}
+
+type VerificationData struct {
+	Email     string
+	CreatedAt time.Time
 }
 
 type Configs interface {
@@ -39,7 +44,7 @@ func NewEmailHandler(router *http.ServeMux, config Configs) {
 			Password: cfgMap["password"],
 			Address:  cfgMap["address"],
 		},
-		verificationHashes: make(map[string]bool),
+		verificationHashes: make(map[string]VerificationData),
 	}
 
 	router.HandleFunc("POST /send", handler.send())
@@ -104,7 +109,8 @@ func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		if !handler.verificationHashes[hash] {
+		verificationData, exists := handler.verificationHashes[hash]
+		if !exists {
 			resp.Json(w, http.StatusBadRequest, map[string]string{
 				"error": "Invalid or expired verification hash",
 			})
@@ -115,7 +121,7 @@ func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 		subject := "Email Verified Successfully"
 		body := "Your email has been successfully verified. Thank you!"
 
-		err := handler.sendEmail(handler.Email, subject, body)
+		err := handler.sendEmail(verificationData.Email, subject, body)
 		if err != nil {
 			log.Printf("Failed to send confirmation email: %v", err)
 		}
@@ -130,7 +136,11 @@ func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 func (handler *Handler) generateVerificationHash(email string) string {
 	data := fmt.Sprintf("%s-%d", email, time.Now().Unix())
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(data)))
-	handler.verificationHashes[hash] = true
+	handler.verificationHashes[hash] = VerificationData{
+		Email:     email,
+		CreatedAt: time.Now(),
+	}
+
 	return hash
 }
 

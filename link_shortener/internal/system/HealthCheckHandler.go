@@ -1,6 +1,10 @@
 package system
 
-import "net/http"
+import (
+	"link_shortener/pkg/resp"
+	"net/http"
+	"time"
+)
 
 func NewHealthCheckHandler(router *http.ServeMux) {
 	router.HandleFunc("GET /health", health())
@@ -8,6 +12,13 @@ func NewHealthCheckHandler(router *http.ServeMux) {
 
 func health() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		response := map[string]interface{}{
+			"status":    "OK",
+			"service":   "link_shortener",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"version":   "0.1.0",
+		}
+
+		resp.Json(w, http.StatusOK, response)
 	}
 }
