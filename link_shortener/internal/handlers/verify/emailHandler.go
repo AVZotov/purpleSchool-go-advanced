@@ -18,6 +18,11 @@ type EmailSecrets struct {
 	Password string
 	Address  string
 }
+type VerificationData struct {
+	Email     string
+	CreatedAt time.Time
+}
+
 type Handler struct {
 	EmailSecrets
 	verificationHashes map[string]VerificationData
@@ -27,22 +32,12 @@ type EmailRequest struct {
 	Email string `json:"email"`
 }
 
-type VerificationData struct {
-	Email     string
-	CreatedAt time.Time
-}
-
-type Configs interface {
-	GetGmailSecrets() *map[string]string
-}
-
-func NewEmailHandler(router *http.ServeMux, config Configs) {
-	cfgMap := *config.GetGmailSecrets()
+func NewEmailHandler(router *http.ServeMux, secrets map[string]string) {
 	handler := &Handler{
 		EmailSecrets: EmailSecrets{
-			Email:    cfgMap["email"],
-			Password: cfgMap["password"],
-			Address:  cfgMap["address"],
+			Email:    secrets["email"],
+			Password: secrets["password"],
+			Address:  secrets["address"],
 		},
 		verificationHashes: make(map[string]VerificationData),
 	}
@@ -57,7 +52,7 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 		var emailReq EmailRequest
 		if err := json.NewDecoder(r.Body).Decode(&emailReq); err != nil {
 			resp.Json(w, http.StatusBadRequest, map[string]string{
-				"error":   "Invalid JSON format",
+				"error":   "Invalid JSON request format",
 				"details": "Request body must contain valid JSON with 'email' field",
 			})
 			return
@@ -66,7 +61,7 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 		targetEmail := emailReq.Email
 		if targetEmail == "" {
 			resp.Json(w, http.StatusBadRequest, map[string]string{
-				"error": "Email address is required",
+				"error": "Email address is required in request body",
 			})
 			return
 		}

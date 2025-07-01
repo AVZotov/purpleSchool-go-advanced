@@ -24,6 +24,6 @@ func main() {
 }
 
 func registerHandlers(router *http.ServeMux, config *config.Config) {
-	verify.NewEmailHandler(router, config)
+	verify.NewEmailHandler(router, *config.GetGmailSecrets())
 	system.NewHealthCheckHandler(router)
 }
