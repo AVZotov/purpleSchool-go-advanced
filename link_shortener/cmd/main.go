@@ -10,7 +10,11 @@ import (
 )
 
 func main() {
-	configs, err := config.NewConfig()
+	envTags := map[string]string{
+		"email":    "GMAIL_EMAIL",
+		"password": "GMAIL_PASSWORD",
+		"address":  "GMAIL_ADDRESS"}
+	configs, err := config.NewConfig(envTags)
 	if err != nil {
 		log.Fatal(err)
 	}

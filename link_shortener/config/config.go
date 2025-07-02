@@ -4,8 +4,8 @@ type Config struct {
 	EmailConfig *EmailSecrets
 }
 
-func NewConfig() (*Config, error) {
-	emailConfig, err := newEmailConfig()
+func NewConfig(envTags map[string]string) (*Config, error) {
+	emailConfig, err := newEmailConfig(envTags)
 	if err != nil {
 		return nil, err
 	}
