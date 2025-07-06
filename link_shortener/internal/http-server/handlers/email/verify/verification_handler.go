@@ -18,7 +18,6 @@ const (
 	V1SEND   = "/api/v1/send"
 	V1VERIFY = "/api/v1/verify/{hash}"
 	VERIFY   = "/verify/{hash}"
-	INFO     = "api/v1/info"
 )
 
 type Response struct {
@@ -51,11 +50,11 @@ type FileHandler interface {
 	Delete(string) error
 }
 
-func NewEmailHandler(router *http.ServeMux, secrets []byte, hash Hash) error {
+func NewVerificationHandler(router *http.ServeMux, secrets []byte, hash Hash) error {
 	var emailSecrets = config.EmailSecrets{}
 	err := json.Unmarshal(secrets, &emailSecrets)
 	if err != nil {
-		return fmt.Errorf("error in 'NewEmailHandler': %w", err)
+		return fmt.Errorf("error in 'NewVerificationHandler': %w", err)
 	}
 
 	handler := &Handler{
@@ -65,28 +64,10 @@ func NewEmailHandler(router *http.ServeMux, secrets []byte, hash Hash) error {
 	}
 	router.HandleFunc("POST "+V1SEND, handler.send())
 	router.HandleFunc("GET "+V1VERIFY, handler.verify())
-	router.HandleFunc("GET "+INFO, handler.emailInfo())
 	router.HandleFunc("POST "+SEND, handler.send())
 	router.HandleFunc("GET "+VERIFY, handler.verify())
 
 	return nil
-}
-
-func (handler *Handler) emailInfo() func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		info := map[string]interface{}{
-			"provider": handler.Provider,
-			"host":     handler.Host,
-			"port":     handler.Port,
-			"from":     handler.Email,
-		}
-
-		if handler.Provider == "mailhog" {
-			info["web_ui"] = fmt.Sprintf("http://%s:8025", handler.Host)
-			info["note"] = "MailHog development mode - all emails captured locally"
-		}
-		resp.Json(w, http.StatusOK, info)
-	}
 }
 
 func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {

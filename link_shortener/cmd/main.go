@@ -37,9 +37,9 @@ func main() {
 }
 
 func registerHandlers(router *http.ServeMux, secrets []byte) error {
-	err := verify.NewEmailHandler(router, secrets, security.NewHash())
+	err := verify.NewVerificationHandler(router, secrets, security.NewHash())
 	if err != nil {
-		return fmt.Errorf("error creating 'NewEmailHandler' handler: %s", err)
+		return fmt.Errorf("error creating 'NewVerificationHandler' handler: %s", err)
 	}
 	system.NewHealthCheckHandler(router)
 	return nil
