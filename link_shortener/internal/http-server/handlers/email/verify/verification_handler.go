@@ -38,19 +38,20 @@ type Handler struct {
 	config.EmailSecrets
 	VerificationData VerificationData
 	Hash             Hash
+	Storage          Storage
 }
 
 type Hash interface {
 	GetHash(string) string
 }
 
-type FileHandler interface {
-	Create(any) error
-	Read() ([]byte, error)
-	Delete(string) error
+type Storage interface {
+	Save(email string, hash string) error
+	Load(hash string) (map[string]string, error)
+	Delete(hash string) error
 }
 
-func NewVerificationHandler(router *http.ServeMux, secrets []byte, hash Hash) error {
+func NewVerificationHandler(router *http.ServeMux, secrets []byte, hashFunction Hash, storage Storage) error {
 	var emailSecrets = config.EmailSecrets{}
 	err := json.Unmarshal(secrets, &emailSecrets)
 	if err != nil {
@@ -60,7 +61,8 @@ func NewVerificationHandler(router *http.ServeMux, secrets []byte, hash Hash) er
 	handler := &Handler{
 		EmailSecrets:     emailSecrets,
 		VerificationData: VerificationData{},
-		Hash:             hash,
+		Hash:             hashFunction,
+		Storage:          storage,
 	}
 	router.HandleFunc("POST "+V1SEND, handler.send())
 	router.HandleFunc("GET "+V1VERIFY, handler.verify())
@@ -70,7 +72,7 @@ func NewVerificationHandler(router *http.ServeMux, secrets []byte, hash Hash) er
 	return nil
 }
 
-func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var emailReq Request
 
@@ -84,15 +86,15 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handler.VerificationData.RequestEmail = emailReq.Email
-		// TODO: handler.VerificationData.Hash = handler.Hash.GetHash(emailReq.Email) error in logic
+		h.VerificationData.RequestEmail = emailReq.Email
+		h.VerificationData.Hash = h.Hash.GetHash(emailReq.Email)
 		verificationLink := fmt.Sprintf("http://localhost:8081/verify/%s",
-			handler.VerificationData.Hash)
+			h.VerificationData.Hash)
 		subject := "Email VerificationData Required"
 		body := fmt.Sprintf("Please verify your email by clicking the following link:\n%s",
 			verificationLink)
 
-		err := handler.sendEmail(handler.VerificationData.RequestEmail, subject, body)
+		err := h.sendEmail(h.VerificationData.RequestEmail, subject, body)
 		if err != nil {
 			resp.Json(w, http.StatusInternalServerError, resp.SendingEmailError(err))
 			return
@@ -103,38 +105,64 @@ func (handler *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			Link:     verificationLink,
 		}
 		resp.Json(w, http.StatusOK, response)
-	}
 
-	//TODO: Call to save this data into local storage
+		err = h.Storage.Save(h.VerificationData.RequestEmail, h.VerificationData.Hash)
+		if err != nil {
+			resp.Json(w, http.StatusInternalServerError, map[string]string{
+				"error":   err.Error(),
+				"details": "error saving verification link",
+			})
+		}
+	}
 }
 
-func (handler *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hash := r.PathValue("hash")
 		if hash == "" {
 			resp.Json(w, http.StatusBadRequest, resp.HashError())
+			return
 		}
-		//TODO: Read tmp file and return if hashes are equals from path and file
 
-		//TODO: Delete tmp file in both cases
-		//delete(handler.verificationHashes, hash)
+		data, err := h.Storage.Load(hash)
+		if err != nil {
+			resp.Json(w, http.StatusInternalServerError, map[string]string{
+				"error":   err.Error(),
+				"details": "error loading data from storage",
+			})
+			return
+		}
+
+		storedEmail := data["storedEmail"]
+		storedHash := data["storedHash"]
+
+		if !validateRequest(hash, storedHash) {
+			resp.Json(w, http.StatusBadRequest, resp.HashError())
+			return
+		}
 
 		subject := "Email Verified Successfully"
-		body := "Your email has been successfully verified. Thank you!"
+		body := "Your storedEmail has been successfully verified. Thank you!"
 
-		err := handler.sendEmail(verificationData.Email, subject, body)
+		err = h.sendEmail(storedEmail, subject, body)
 		if err != nil {
-			log.Printf("Failed to send confirmation email: %v", err)
+			log.Printf("Failed to send confirmation storedEmail: %v", err)
 			resp.Json(w, http.StatusInternalServerError, resp.SendingEmailError(err))
 		}
-
 		resp.Json(w, http.StatusOK, resp.Verified())
+		err = h.Storage.Delete(hash)
+		if err != nil {
+			resp.Json(w, http.StatusInternalServerError, map[string]string{
+				"error":   err.Error(),
+				"details": "error deleting record from storage",
+			})
+		}
 	}
 }
 
-func (handler *Handler) sendEmail(to, subject, body string) error {
+func (h *Handler) sendEmail(to, subject, body string) error {
 	sender := "Link shortener"
-	from := fmt.Sprintf("%s <%s>", sender, handler.Email)
+	from := fmt.Sprintf("%s <%s>", sender, h.Email)
 
 	e := email.NewEmail()
 	e.From = from
@@ -142,10 +170,14 @@ func (handler *Handler) sendEmail(to, subject, body string) error {
 	e.Subject = subject
 	e.Text = []byte(body)
 
-	if handler.Provider == "mailhog" {
-		return e.Send(handler.Address, nil)
+	if h.Provider == "mailhog" {
+		return e.Send(h.Address, nil)
 	}
 
-	auth := smtp.PlainAuth("", handler.Email, handler.Password, handler.Host)
-	return e.Send(handler.Address, auth)
+	auth := smtp.PlainAuth("", h.Email, h.Password, h.Host)
+	return e.Send(h.Address, auth)
+}
+
+func validateRequest(requestedHash string, storedHash string) bool {
+	return storedHash == requestedHash
 }

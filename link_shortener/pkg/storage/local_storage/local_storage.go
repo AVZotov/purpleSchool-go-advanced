@@ -27,7 +27,7 @@ func NewStorage(devEnv string) (*Storage, error) {
 }
 
 func (s *Storage) Save(email string, hash string) error {
-	fileName, err := getName(email, hash)
+	fileName, err := getName(hash)
 	if err != nil {
 		return err
 	}
@@ -57,9 +57,9 @@ func (s *Storage) Save(email string, hash string) error {
 	return nil
 }
 
-func (s *Storage) Load(email string, hash string) (_ *map[string]string, err error) {
+func (s *Storage) Load(hash string) (_ map[string]string, err error) {
 	details := make(map[string]string, 2)
-	fileName, err := getName(email, hash)
+	fileName, err := getName(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +77,6 @@ func (s *Storage) Load(email string, hash string) (_ *map[string]string, err err
 		if err = file.Close(); err != nil {
 			fmt.Println("error closing file")
 		}
-		err = s.FileHandler.delete(fileName)
-		if err != nil {
-			fmt.Println("error deleting file")
-			return
-		}
 	}()
 
 	payload, err := io.ReadAll(file)
@@ -98,13 +93,30 @@ func (s *Storage) Load(email string, hash string) (_ *map[string]string, err err
 	details["email"] = bin.Email
 	details["hash"] = bin.Hash
 
-	return &details, nil
+	return details, nil
 }
 
-func getName(email string, hash string) (string, error) {
-	s := fmt.Sprintf("%s:%s", email, hash)
+func (s *Storage) Delete(hash string) error {
+	fileName, err := getName(hash)
+	if err != nil {
+		return err
+	}
+
+	if !s.fileExists(fileName) {
+		return errors.New("file does not exist")
+	}
+
+	err = s.FileHandler.delete(fileName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getName(hash string) (string, error) {
 	hasher := fnv.New32a()
-	_, err := hasher.Write([]byte(s))
+	_, err := hasher.Write([]byte(hash))
 	if err != nil {
 		return "", err
 	}
