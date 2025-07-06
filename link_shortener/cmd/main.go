@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"link_shortener/config"
-	"link_shortener/internal/handlers/system"
-	"link_shortener/internal/handlers/verify"
-	"link_shortener/pkg"
+	"link_shortener/internal/http-server/handlers/email/verify"
+	"link_shortener/internal/http-server/handlers/system"
+	"link_shortener/internal/http-server/router"
+	"link_shortener/internal/http-server/server"
 	"link_shortener/pkg/security"
 	"log"
 	"net/http"
@@ -20,13 +21,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	router := pkg.NewRouter()
+	router := router.NewRouter()
 	err = registerHandlers(router, emailSecrets)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	server := pkg.NewServer("8081", router)
+	server := server.NewServer("8081", router)
 	log.Println("Starting server on port 8081")
 	err = server.ListenAndServe()
 	if err != nil {

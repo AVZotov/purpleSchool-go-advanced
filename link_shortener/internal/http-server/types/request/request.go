@@ -1,5 +1,5 @@
-package req
+package request
 
-type EmailRequest struct {
+type Request struct {
 	Email string `json:"email" validate:"required,email"`
 }
