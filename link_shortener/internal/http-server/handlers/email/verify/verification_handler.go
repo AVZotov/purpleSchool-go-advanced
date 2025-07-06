@@ -133,8 +133,8 @@ func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		storedEmail := data["storedEmail"]
-		storedHash := data["storedHash"]
+		storedEmail := data["email"]
+		storedHash := data["hash"]
 
 		if !validateRequest(hash, storedHash) {
 			resp.Json(w, http.StatusBadRequest, resp.HashError())

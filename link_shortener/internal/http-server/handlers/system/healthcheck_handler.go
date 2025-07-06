@@ -1,7 +1,7 @@
 package system
 
 import (
-	"link_shortener/internal/http-server/types/response"
+	resp "link_shortener/internal/http-server/types/response"
 	"net/http"
 	"time"
 )
@@ -17,9 +17,9 @@ func health() func(http.ResponseWriter, *http.Request) {
 			"status":    "OK",
 			"service":   "link_shortener",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"version":   "0.2.0",
+			"version":   "0.2.1",
 		}
 
-		response.Json(w, http.StatusOK, response)
+		resp.Json(w, http.StatusOK, response)
 	}
 }

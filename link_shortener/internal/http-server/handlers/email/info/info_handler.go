@@ -18,7 +18,7 @@ func NewInfoHandler(router *http.ServeMux, secrets []byte) error {
 	var emailSecrets = config.EmailSecrets{}
 	err := json.Unmarshal(secrets, &emailSecrets)
 	if err != nil {
-		return fmt.Errorf("error in 'NewVerificationHandler': %w", err)
+		return fmt.Errorf("error in 'NewInfoHandler': %w", err)
 	}
 
 	handler := &Handler{
