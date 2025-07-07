@@ -100,12 +100,6 @@ func (h *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		response := Response{
-			Response: resp.VerificationSent(),
-			Link:     verificationLink,
-		}
-		resp.Json(w, http.StatusOK, response)
-
 		err = h.Storage.Save(h.VerificationData.RequestEmail, h.VerificationData.Hash)
 		if err != nil {
 			resp.Json(w, http.StatusInternalServerError, map[string]string{
@@ -113,6 +107,12 @@ func (h *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 				"details": "error saving verification link",
 			})
 		}
+
+		response := Response{
+			Response: resp.VerificationSent(),
+			Link:     verificationLink,
+		}
+		resp.Json(w, http.StatusOK, response)
 	}
 }
 
@@ -141,6 +141,14 @@ func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		err = h.Storage.Delete(hash)
+		if err != nil {
+			resp.Json(w, http.StatusInternalServerError, map[string]string{
+				"error":   err.Error(),
+				"details": "error deleting record from storage",
+			})
+		}
+
 		subject := "Email Verified Successfully"
 		body := "Your storedEmail has been successfully verified. Thank you!"
 
@@ -149,14 +157,8 @@ func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Failed to send confirmation storedEmail: %v", err)
 			resp.Json(w, http.StatusInternalServerError, resp.SendingEmailError(err))
 		}
+
 		resp.Json(w, http.StatusOK, resp.Verified())
-		err = h.Storage.Delete(hash)
-		if err != nil {
-			resp.Json(w, http.StatusInternalServerError, map[string]string{
-				"error":   err.Error(),
-				"details": "error deleting record from storage",
-			})
-		}
 	}
 }
 

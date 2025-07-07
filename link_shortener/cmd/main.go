@@ -15,6 +15,12 @@ import (
 )
 
 func main() {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("Recovered from panic: %v", rec)
+		}
+	}()
+
 	configs, err := config.NewConfig("mailhog")
 	if err != nil {
 		log.Fatal(err)
