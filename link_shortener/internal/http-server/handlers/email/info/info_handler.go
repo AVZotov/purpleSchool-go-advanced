@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-const INFO = "api/v1/info"
+const INFO = "/api/v1/info"
 
 type Handler struct {
 	config.EmailSecrets
