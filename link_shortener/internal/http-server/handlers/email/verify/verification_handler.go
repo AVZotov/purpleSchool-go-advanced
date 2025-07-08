@@ -51,7 +51,8 @@ type Storage interface {
 	Delete(hash string) error
 }
 
-func NewVerificationHandler(router *http.ServeMux, secrets []byte, hashFunction Hash, storage Storage) error {
+func NewVerificationHandler(router *http.ServeMux, secrets any, hashFunction Hash, storage Storage) error {
+
 	var emailSecrets = config.EmailSecrets{}
 	err := json.Unmarshal(secrets, &emailSecrets)
 	if err != nil {

@@ -32,7 +32,7 @@ func Json(w http.ResponseWriter, code int, payload any) {
 				log.Printf("Level 2 (simple JSON error) fails: %v", err3)
 
 				w.Header().Set("Content-Type", "text/plain")
-				if _, err4 := w.Write([]byte("internal Server Error")); err4 != nil {
+				if _, err4 := w.Write([]byte("internal HTTPServer Error")); err4 != nil {
 					log.Printf("CRITICAL: All fallback levels failed: %v", err4)
 				}
 			}
