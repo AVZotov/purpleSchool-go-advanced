@@ -21,7 +21,7 @@ func main() {
 			log.Printf("Recovered from panic: %v", rec)
 		}
 	}()
-
+	//TODO: Read devEnv from env var
 	logger := l.NewLogger("dev")
 
 	configs, err := config.NewConfig("mailhog")

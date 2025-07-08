@@ -10,7 +10,7 @@ services:
       POSTGRES_DB: link_shortener
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data/pgdata
+      - ./data:/var/lib/postgresql/data/pgdata
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d link_shortener"]
@@ -30,5 +30,5 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres-data:
+  data:
 
