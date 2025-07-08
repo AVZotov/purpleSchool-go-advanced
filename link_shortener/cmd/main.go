@@ -21,15 +21,15 @@ func main() {
 			log.Printf("Recovered from panic: %v", rec)
 		}
 	}()
+	configs, err := config.NewConfig("mailhog")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	//TODO: Read devEnv from env var
 	logger := l.NewLogger("dev")
 
-	configs, err := config.NewConfig("mailhog")
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	storage, err := local_storage.NewStorage("dev")
+	storage, err := local_storage.NewStorage("dev", logger)
 	if err != nil {
 		logger.Error(err.Error())
 		return

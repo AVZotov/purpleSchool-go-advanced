@@ -1,4 +1,4 @@
-package y_config
+package config
 
 import "time"
 
@@ -18,7 +18,7 @@ type MailService struct {
 }
 
 type Server struct {
-	Address     string        `yaml:"address" set-default:"http://localhost:8081"`
+	Address     string        `yaml:"address" set-default:"http://localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" set-default:"4s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" set-default:"60s"`
 }

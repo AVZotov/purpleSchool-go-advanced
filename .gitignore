@@ -28,8 +28,6 @@ go.work.sum
 .env
 .env.*
 link_shortener/config/env
-link_shortener/config/test
-link_shortener/config/test/scratch.txt
 
 # json files
 *.json
