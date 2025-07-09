@@ -1,10 +1,9 @@
 package local_storage
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"log/slog"
+	t "link_shortener/pkg/storage/types"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,73 +11,81 @@ import (
 
 const TMPDIR = "tmp"
 
-type FileHandler struct {
+type Handler struct {
 	WorkDir string
-	log     *slog.Logger
+	Log     t.Logger
 }
 
-func newFileHandler(env string, log *slog.Logger) (*FileHandler, error) {
-	log.With("link_shortener.pkg.storage.local_storage.file_handler.newFileHandler()")
+func newHandler(env string, log t.Logger) (*Handler, error) {
+	const fn = "pkg.storage.local_storage.file_handler.newHandler"
+	fh := &Handler{
+		Log: log,
+	}
+
+	fh.Log.With(fn)
 	path, err := getFullPath(env, log)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	fh := &FileHandler{
-		WorkDir: path,
-		log:     log,
-	}
+	fh.WorkDir = path
 
-	log.Debug("file handler initialized")
+	log.Debug("fileHandler initialized")
 
 	return fh, nil
 }
 
-func (h *FileHandler) load(name string) (io.ReadCloser, error) {
-	log := h.log.With("link_shortener.pkg.storage.local_storage.file_handler.load()")
+func (h *Handler) load(name string) (io.ReadCloser, error) {
+	const fn = "pkg.storage.local_storage.file_handler.load"
+	h.Log.With(fn)
+
 	filePath := filepath.Join(h.WorkDir, name)
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		h.Log.Error(err.Error())
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	log.Debug("file opened for reading")
+	h.Log.Debug("file opened for reading")
 
 	return file, nil
 }
 
-func (h *FileHandler) save(name string) (io.WriteCloser, error) {
-	log := h.log.With("link_shortener.pkg.storage.local_storage.file_handler.save")
+func (h *Handler) save(name string) (io.WriteCloser, error) {
+	const fn = "pkg.storage.local_storage.file_handler.save"
+	h.Log.With(fn)
 	filePath := filepath.Join(h.WorkDir, name)
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		h.Log.Error(err.Error())
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	log.Debug("file opened for writing")
+	h.Log.Debug("file opened for writing")
 
 	return file, nil
 }
 
-func (h *FileHandler) delete(name string) error {
-	log := h.log.With("link_shortener.pkg.storage.local_storage.file_handler.delete()")
+func (h *Handler) delete(name string) error {
+	const fn = "pkg.storage.local_storage.file_handler.delete"
+	h.Log.With(fn)
 	file := filepath.Join(h.WorkDir, name)
 	if err := os.Remove(file); err != nil {
-		log.Error(err.Error())
-		return err
+		h.Log.Error(err.Error())
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	log.Debug("file deleted")
+	h.Log.Debug("file deleted")
 
 	return nil
 }
 
-func getFullPath(env string, log *slog.Logger) (string, error) {
-	log.With("link_shortener.pkg.storage.local_storage.file_handler.getFullPath()")
+func getFullPath(env string, log t.Logger) (string, error) {
+	const fn = "pkg.storage.local_storage.file_handler.getFullPath"
+	log.With(fn)
+
 	switch env {
 	case "dev":
 		_, filename, _, _ := runtime.Caller(0)
@@ -87,13 +94,14 @@ func getFullPath(env string, log *slog.Logger) (string, error) {
 		err := os.MkdirAll(path, 0755)
 		if err != nil {
 			log.Error(err.Error())
-			return "", err
+			return "", fmt.Errorf("%s: %w", fn, err)
 		}
 		return path, nil
 	case "prod":
 		return os.TempDir(), nil
 	default:
 		log.Error(fmt.Sprintf("unknown env type: %s", env))
-		return "", errors.New("unknown environment set")
+		return "", fmt.Errorf("%s: %w", fn, fmt.Errorf(
+			"unknown env type: %s", env))
 	}
 }

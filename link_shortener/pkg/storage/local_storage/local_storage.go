@@ -2,55 +2,59 @@ package local_storage
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
-	"log/slog"
+	t "link_shortener/pkg/storage/types"
 	"os"
 	"path"
 	"strconv"
 )
 
 type Storage struct {
-	FileHandler *FileHandler
-	log         *slog.Logger
+	FileHandler *Handler
+	Log         t.Logger
 }
 
-func NewStorage(devEnv string, log *slog.Logger) (*Storage, error) {
-	log.With("link_shortener.pkg.storage.local_storage.local_storage.NewStorage()")
-	fileHandler, err := newFileHandler(devEnv, log)
-	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+func New(devEnv string, log t.Logger) (*Storage, error) {
+	const fn = "pkg.storage.local_storage.local_storage.new"
+	s := &Storage{
+		Log: log,
 	}
 
-	storage := &Storage{
-		FileHandler: fileHandler,
-		log:         log,
+	s.Log.With(fn)
+
+	fileHandler, err := newHandler(devEnv, s.Log)
+	if err != nil {
+		s.Log.Error(err.Error())
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
+
+	s.FileHandler = fileHandler
+
 	log.Debug("new local storage created")
 
-	return storage, nil
+	return s, nil
 }
 
 func (s *Storage) Save(email string, hash string) error {
-	log := s.log.With("link_shortener.pkg.storage.local_storage.local_storage.Save()")
-	fileName, err := getName(hash, log)
+	const fn = "pkg.storage.local_storage.local_storage.save"
+	s.Log.With(fn)
+	fileName, err := getName(hash, s.Log)
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	if s.fileExists(fileName) {
-		log.Warn("file already exists")
-		return errors.New("file exists")
+		s.Log.Warn(fmt.Sprintf("%s:%s already exists", fn, fileName))
+		return fmt.Errorf("%s:%s already exists", fn, fileName)
 	}
 
 	file, err := s.FileHandler.save(fileName)
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 	defer file.Close()
 
@@ -58,92 +62,94 @@ func (s *Storage) Save(email string, hash string) error {
 
 	payload, err := json.Marshal(bin)
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	_, err = file.Write(payload)
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	log.Debug("file saved to local storage")
+	s.Log.Debug("file saved to local storage")
 
 	return nil
 }
 
-func (s *Storage) Load(hash string) (_ map[string]string, err error) {
-	log := s.log.With("link_shortener.pkg.storage.local_storage.local_storage.Load()")
+func (s *Storage) Load(hash string) (map[string]string, error) {
+	const fn = "pkg.storage.local_storage.local_storage.load"
+	s.Log.With(fn)
 	details := make(map[string]string, 2)
-	fileName, err := getName(hash, log)
+	fileName, err := getName(hash, s.Log)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	if !s.fileExists(fileName) {
-		log.Error("file does not exist")
-		return nil, errors.New("file does not exist")
+		s.Log.Warn(fmt.Sprintf("%s:%s does not exists", fn, fileName))
+		return nil, fmt.Errorf("%s:%s does not exists", fn, fileName)
 	}
 
 	file, err := s.FileHandler.load(fileName)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	defer func() {
 		if err = file.Close(); err != nil {
-			log.Error(err.Error(), "error closing file")
+			s.Log.Error(fn, err.Error(), "error closing file")
 		}
 	}()
 
 	payload, err := io.ReadAll(file)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	var bin Bin
 	err = json.Unmarshal(payload, &bin)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	details["email"] = bin.Email
 	details["hash"] = bin.Hash
 
-	log.Debug("file loaded from local storage")
+	s.Log.Debug(fn, "file loaded from local storage")
 
 	return details, nil
 }
 
 func (s *Storage) Delete(hash string) error {
-	log := s.log.With("link_shortener.pkg.storage.local_storage.local_storage.Delete()")
-	fileName, err := getName(hash, log)
+	const fn = "link_shortener.pkg.storage.local_storage.local_storage.Delete"
+	s.Log.With(fn)
+	fileName, err := getName(hash, s.Log)
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	if !s.fileExists(fileName) {
-		log.Error("file does not exist")
-		return errors.New("file does not exist")
+		s.Log.Warn(fmt.Sprintf("%s:%s does not exists", fn, fileName))
+		return fmt.Errorf("%s:%s does not exists", fn, fileName)
 	}
 
 	err = s.FileHandler.delete(fileName)
 	if err != nil {
-		log.Error(err.Error())
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	log.Debug("file deleted from local storage")
+	s.Log.Debug("file deleted from local storage")
 	return nil
 }
 
-func getName(hash string, log *slog.Logger) (string, error) {
+func getName(hash string, log t.Logger) (string, error) {
 	log.With("link_shortener.pkg.storage.local_storage.local_storage.getName()")
 	hasher := fnv.New32a()
 	_, err := hasher.Write([]byte(hash))
@@ -159,14 +165,15 @@ func getName(hash string, log *slog.Logger) (string, error) {
 }
 
 func (s *Storage) fileExists(fileName string) bool {
-	log := s.log.With("link_shortener.pkg.storage.local_storage.local_storage.FileExists()")
+	const fn = "link_shortener.pkg.storage.local_storage.local_storage.fileExists"
+	s.Log.With(fn)
 	filePath := path.Join(s.FileHandler.WorkDir, fileName)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		log.Debug(fmt.Sprintf("file %s does not exist", filePath))
+		s.Log.Debug(fmt.Sprintf("%s:file %s does not exist", fn, filePath))
 
 		return false
 	}
-	log.Debug(fmt.Sprintf("file %s does exist", filePath))
+	s.Log.Debug(fmt.Sprintf("%s:file %s exists", fn, filePath))
 
 	return true
 }

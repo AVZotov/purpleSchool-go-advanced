@@ -1,4 +1,4 @@
-package response
+package types
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ type Response struct {
 	Status  string `json:"status"`
 	Error   string `json:"error,omitempty"`
 	Message string `json:"message,omitempty"`
+	Link    string `json:"link,omitempty"`
 }
 
 func Json(w http.ResponseWriter, code int, payload any) {
@@ -71,10 +72,11 @@ func HashError() Response {
 	}
 }
 
-func VerificationSent() Response {
+func VerificationSent(link string) Response {
 	return Response{
 		Status:  http.StatusText(http.StatusOK),
 		Message: "VerificationData email sent successfully",
+		Link:    link,
 	}
 }
 

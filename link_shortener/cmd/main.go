@@ -1,15 +1,13 @@
 package main
 
 import (
-	"fmt"
-	cfg "link_shortener/internal/config"
+	config "link_shortener/internal/config"
 	"link_shortener/internal/http-server/handlers/email/info"
-	"link_shortener/internal/http-server/handlers/email/verify"
 	"link_shortener/internal/http-server/handlers/system"
-	r "link_shortener/internal/http-server/router"
+	router "link_shortener/internal/http-server/router"
 	httpserver "link_shortener/internal/http-server/server"
 	"link_shortener/pkg/security"
-	st "link_shortener/pkg/storage/local_storage"
+	storage "link_shortener/pkg/storage/local_storage"
 	"log"
 	"log/slog"
 	"net/http"
@@ -22,8 +20,6 @@ import (
 const ConfigPath = "./config/env"
 const DevFile = "dev.yml"
 
-//const ProdFile = "prod.yml"
-
 func main() {
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -32,37 +28,39 @@ func main() {
 	}()
 
 	configPath := path.Join(ConfigPath, DevFile)
-	configs := cfg.MustLoadConfig(configPath)
+	configs := config.MustLoadConfig(configPath)
 
-	logger := l.NewLogger(configs.Env)
+	logger := l.NewLogger(configs.Env())
 
-	storage, err := st.NewStorage(configs.Env, logger)
+	localStorage, err := storage.New(configs.Env(), logger)
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
-	router := r.NewRouter()
+	router := router.NewRouter()
 
-	err = registerHandlers(router, configs, storage, logger)
+	err = registerHandlers(router, configs, localStorage, logger)
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
-	//TODO: add port to configs
-	server := httpserver.NewServer("8081", router)
+
+	server := httpserver.NewServer(configs.HttpServer.Port(), router)
 	err = server.ListenAndServe()
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
-	logger.Info("Starting server on port 8081")
 
+	logger.Info("Starting server on port %s", configs.HttpServer.Port())
 }
 
-func registerHandlers(router *http.ServeMux, configs *cfg.Config, storage *st.Storage, logger *slog.Logger) error {
-	logger.With("link_shortener.cmd.registerHandlers()")
+func registerHandlers(router *http.ServeMux, configs *config.Config,
+	storage *storage.Storage, logger *slog.Logger) error {
+	const fn = "link_shortener.cmd.main.registerHandlers"
+	logger.With(fn)
 	emailSecrets := &configs.MailService
-	err := verify.NewVerificationHandler(router, emailSecrets, security.NewHashHandler(), storage)
+	err := email.New(router, emailSecrets, security.NewHashHandler(), storage)
 	if err != nil {
 		logger.Error(err.Error())
 		return err

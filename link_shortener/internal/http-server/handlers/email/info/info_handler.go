@@ -1,28 +1,22 @@
-package info
+package email
 
 import (
-	"encoding/json"
 	"fmt"
-	"link_shortener/config"
-	resp "link_shortener/internal/http-server/types/response"
+	t "link_shortener/internal/http-server/handlers/types"
 	"net/http"
 )
 
 const INFO = "/api/v1/info"
 
 type Handler struct {
-	config.EmailSecrets
+	Secrets t.MailService
+	Log     t.Logger
 }
 
-func NewInfoHandler(router *http.ServeMux, secrets []byte) error {
-	var emailSecrets = config.EmailSecrets{}
-	err := json.Unmarshal(secrets, &emailSecrets)
-	if err != nil {
-		return fmt.Errorf("error in 'NewInfoHandler': %w", err)
-	}
-
+func New(router *http.ServeMux, secrets t.MailService, logger t.Logger) error {
 	handler := &Handler{
-		EmailSecrets: emailSecrets,
+		Secrets: secrets,
+		Log:     logger,
 	}
 
 	router.HandleFunc("GET "+INFO, handler.emailInfo())
@@ -30,20 +24,22 @@ func NewInfoHandler(router *http.ServeMux, secrets []byte) error {
 	return nil
 }
 
-func (handler *Handler) emailInfo() func(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) emailInfo() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		info := map[string]interface{}{
-			"provider": handler.Provider,
-			"host":     handler.Host,
-			"port":     handler.Port,
-			"from":     handler.Email,
+			"provider": h.Secrets.Name(),
+			"host":     h.Secrets.Host(),
+			"port":     h.Secrets.Port(),
+			"from":     h.Secrets.Email(),
 		}
 
-		if handler.Provider == "mailhog" {
-			info["web_ui"] = fmt.Sprintf("http://%s:8025", handler.Host)
+		if h.Secrets.Name() == "mailhog" {
+			info["web_ui"] = fmt.Sprintf("http://%s:8025", h.Secrets.Host())
 			info["note"] = "MailHog development mode - all emails captured locally"
 		}
 
-		resp.Json(w, http.StatusOK, info)
+		t.Json(w, http.StatusOK, info)
+
+		h.Log.Debug(fmt.Sprintf("email info: %v", info))
 	}
 }

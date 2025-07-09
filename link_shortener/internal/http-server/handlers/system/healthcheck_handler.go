@@ -1,7 +1,7 @@
 package system
 
 import (
-	resp "link_shortener/internal/http-server/types/response"
+	resp "link_shortener/internal/http-server/handlers/types"
 	"net/http"
 	"time"
 )

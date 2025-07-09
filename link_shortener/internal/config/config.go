@@ -7,26 +7,75 @@ import (
 	"time"
 )
 
-type Config struct {
-	Env         string `yaml:"env" required:"true"`
-	DbStorage   string `yaml:"db_storage" required:"true"`
-	MailService `yaml:"mail_service" required:"true"`
-	HTTPServer  `yaml:"http_server" required:"true"`
-}
-
 type MailService struct {
-	Name     string `yaml:"name" required:"true"`
-	Email    string `yaml:"email" required:"true"`
-	Password string `yaml:"password" required:"true"`
-	Host     string `yaml:"host" required:"true"`
-	Port     string `yaml:"port" required:"true"`
-	Address  string `yaml:"address" required:"true"`
+	name     string `yaml:"name" required:"true"`
+	email    string `yaml:"email" required:"true"`
+	password string `yaml:"password" required:"true"`
+	host     string `yaml:"host" required:"true"`
+	port     string `yaml:"port" required:"true"`
+	address  string `yaml:"address" required:"true"`
 }
 
-type HTTPServer struct {
-	Address     string        `yaml:"address" env-default:"http://localhost:8080"`
-	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+func (m MailService) Name() string {
+	return m.name
+}
+
+func (m MailService) Email() string {
+	return m.email
+}
+
+func (m MailService) Password() string {
+	return m.password
+}
+
+func (m MailService) Host() string {
+	return m.host
+}
+
+func (m MailService) Port() string {
+	return m.port
+}
+
+func (m MailService) Address() string {
+	return m.address
+}
+
+type HttpServer struct {
+	address     string        `yaml:"address" env-default:"http://localhost:8080"`
+	port        string        `yaml:"port" env-default:"8080"`
+	timeout     time.Duration `yaml:"timeout" env-default:"4s"`
+	idleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+}
+
+func (h HttpServer) Address() string {
+	return h.address
+}
+
+func (h HttpServer) Port() string {
+	return h.port
+}
+
+func (h HttpServer) Timeout() time.Duration {
+	return h.timeout
+}
+
+func (h HttpServer) IdleTimeout() time.Duration {
+	return h.idleTimeout
+}
+
+type Config struct {
+	env         string `yaml:"env" required:"true"`
+	dbStorage   string `yaml:"db_storage" required:"true"`
+	MailService `yaml:"mail_service" required:"true"`
+	HttpServer  `yaml:"http_server" required:"true"`
+}
+
+func (c Config) Env() string {
+	return c.env
+}
+
+func (c Config) DbStorage() string {
+	return c.dbStorage
 }
 
 func MustLoadConfig(configPath string) *Config {
