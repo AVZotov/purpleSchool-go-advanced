@@ -32,9 +32,13 @@ func main() {
 
 	configPath := path.Join(ConfigPath, DevFile)
 	configs := config.MustLoadConfig(configPath)
+	fmt.Println(configPath)
+	fmt.Printf("configs: %#v\n", configs)
 
 	slogLogger := logger.NewLogger(configs.Env())
 	slogLogger.With(fn)
+
+	slogLogger.Info(fmt.Sprintf("env config: %s", configs.Env()))
 
 	handlersLogger := logger.NewWrapper(slogLogger)
 	storageLogger := storageLoggerWrapper.New(slogLogger)

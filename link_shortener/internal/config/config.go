@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"log"
 	"os"
@@ -8,12 +9,12 @@ import (
 )
 
 type MailService struct {
-	name     string `yaml:"name" required:"true"`
-	email    string `yaml:"email" required:"true"`
-	password string `yaml:"password" required:"true"`
-	host     string `yaml:"host" required:"true"`
-	port     string `yaml:"port" required:"true"`
-	address  string `yaml:"address" required:"true"`
+	name     string `yaml:"name" env-required:"true"`
+	email    string `yaml:"email" env-required:"true"`
+	password string `yaml:"password" env-required:"true"`
+	host     string `yaml:"host" env-required:"true"`
+	port     string `yaml:"port" env-required:"true"`
+	address  string `yaml:"address" env-required:"true"`
 }
 
 func (m MailService) Name() string {
@@ -64,10 +65,10 @@ func (h HttpServer) IdleTimeout() time.Duration {
 }
 
 type Config struct {
-	env         string `yaml:"env" required:"true"`
-	dbStorage   string `yaml:"db_storage" required:"true"`
-	MailService `yaml:"mail_service" required:"true"`
-	HttpServer  `yaml:"http_server" required:"true"`
+	env         string `yaml:"env" env-required:"true"`
+	dbStorage   string `yaml:"db_storage" env-required:"true"`
+	MailService `yaml:"mail_service" env-required:"true"`
+	HttpServer  `yaml:"http_server" env-required:"true"`
 }
 
 func (c Config) Env() string {
@@ -89,6 +90,7 @@ func MustLoadConfig(configPath string) *Config {
 		log.Fatal(err)
 		return nil
 	}
+	fmt.Printf("configs: %#v\n", config)
 
 	return &config
 }
