@@ -165,15 +165,9 @@ func getName(hash string, log t.Logger) (string, error) {
 }
 
 func (s *Storage) fileExists(fileName string) bool {
-	const fn = "link_shortener.pkg.storage.local_storage.local_storage.fileExists"
-	s.Log.With(fn)
 	filePath := path.Join(s.FileHandler.WorkDir, fileName)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		s.Log.Debug(fmt.Sprintf("%s:file %s does not exist", fn, filePath))
-
 		return false
 	}
-	s.Log.Debug(fmt.Sprintf("%s:file %s exists", fn, filePath))
-
 	return true
 }

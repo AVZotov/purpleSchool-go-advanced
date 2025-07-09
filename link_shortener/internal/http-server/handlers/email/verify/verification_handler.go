@@ -137,7 +137,7 @@ func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 			h.Log.Error(fmt.Sprintf("%s:%v", fn, err))
 		}
 
-		const subject = "GetEmail Verified Successfully"
+		const subject = "Email Verified Successfully"
 		const body = "Your storedEmail has been successfully verified. Thank you!"
 
 		err = h.sendEmail(storedEmail, subject, body)
@@ -155,6 +155,8 @@ func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) sendEmail(to, subject, body string) error {
 	const fn = "internal.http-server.handlers.email.verify.verification_handler.sendEmail"
 	h.Log.With(fn)
+	h.Log.Debug(fmt.Sprintf("Sending email to: %s, provider: %s", to, h.Secrets.GetName()))
+
 	const sender = "Link shortener"
 	from := fmt.Sprintf("%s <%s>", sender, h.Secrets.GetEmail())
 
@@ -165,20 +167,25 @@ func (h *Handler) sendEmail(to, subject, body string) error {
 	e.Text = []byte(body)
 
 	if h.Secrets.GetName() == "mailhog" {
+		h.Log.Debug("Using MailHog for email delivery")
 		err := e.Send(h.Secrets.GetAddress(), nil)
 		if err != nil {
-			h.Log.Error(err.Error())
+			h.Log.Error(fmt.Sprintf("MailHog send failed: %s", err.Error()))
 			return fmt.Errorf("%s: %v", fn, err)
 		}
+		h.Log.Debug("Email sent successfully via MailHog")
+		return nil
 	}
 
+	h.Log.Debug("Using SMTP for email delivery")
 	auth := smtp.PlainAuth("",
 		h.Secrets.GetEmail(), h.Secrets.GetPassword(), h.Secrets.GetHost())
 	err := e.Send(h.Secrets.GetAddress(), auth)
 	if err != nil {
-		h.Log.Error(err.Error())
+		h.Log.Error(fmt.Sprintf("SMTP send failed: %s", err.Error()))
 		return fmt.Errorf("%s: %v", fn, err)
 	}
+	h.Log.Debug("Email sent successfully via SMTP")
 	return nil
 }
 
