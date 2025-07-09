@@ -70,7 +70,7 @@ func (h *Handler) send() func(w http.ResponseWriter, r *http.Request) {
 		h.VerificationData.RequestEmail = emailReq.Email
 		h.VerificationData.Hash = h.Hash.GetHash(emailReq.Email)
 		verificationLink := fmt.Sprintf("http://localhost:8081/verify/%s", h.VerificationData.Hash)
-		const subject = "Email VerificationData Required"
+		const subject = "GetEmail VerificationData Required"
 		const message = "Please verify your email by clicking the following link:"
 		body := fmt.Sprintf("%s\n%s", message, verificationLink)
 
@@ -137,7 +137,7 @@ func (h *Handler) verify() func(w http.ResponseWriter, r *http.Request) {
 			h.Log.Error(fmt.Sprintf("%s:%v", fn, err))
 		}
 
-		const subject = "Email Verified Successfully"
+		const subject = "GetEmail Verified Successfully"
 		const body = "Your storedEmail has been successfully verified. Thank you!"
 
 		err = h.sendEmail(storedEmail, subject, body)
@@ -156,7 +156,7 @@ func (h *Handler) sendEmail(to, subject, body string) error {
 	const fn = "internal.http-server.handlers.email.verify.verification_handler.sendEmail"
 	h.Log.With(fn)
 	const sender = "Link shortener"
-	from := fmt.Sprintf("%s <%s>", sender, h.Secrets.Email())
+	from := fmt.Sprintf("%s <%s>", sender, h.Secrets.GetEmail())
 
 	e := email.NewEmail()
 	e.From = from
@@ -164,8 +164,8 @@ func (h *Handler) sendEmail(to, subject, body string) error {
 	e.Subject = subject
 	e.Text = []byte(body)
 
-	if h.Secrets.Name() == "mailhog" {
-		err := e.Send(h.Secrets.Address(), nil)
+	if h.Secrets.GetName() == "mailhog" {
+		err := e.Send(h.Secrets.GetAddress(), nil)
 		if err != nil {
 			h.Log.Error(err.Error())
 			return fmt.Errorf("%s: %v", fn, err)
@@ -173,8 +173,8 @@ func (h *Handler) sendEmail(to, subject, body string) error {
 	}
 
 	auth := smtp.PlainAuth("",
-		h.Secrets.Email(), h.Secrets.Password(), h.Secrets.Host())
-	err := e.Send(h.Secrets.Address(), auth)
+		h.Secrets.GetEmail(), h.Secrets.GetPassword(), h.Secrets.GetHost())
+	err := e.Send(h.Secrets.GetAddress(), auth)
 	if err != nil {
 		h.Log.Error(err.Error())
 		return fmt.Errorf("%s: %v", fn, err)

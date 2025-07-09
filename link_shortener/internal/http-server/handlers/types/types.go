@@ -1,12 +1,12 @@
 package types
 
 type MailService interface {
-	Name() string
-	Email() string
-	Password() string
-	Host() string
-	Port() string
-	Address() string
+	GetName() string
+	GetEmail() string
+	GetPassword() string
+	GetHost() string
+	GetPort() string
+	GetAddress() string
 }
 
 type Hash interface {

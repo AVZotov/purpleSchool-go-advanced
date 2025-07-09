@@ -8,6 +8,6 @@ type Logger interface {
 	With(args ...any) Logger
 }
 type Config interface {
-	Env() string
-	DbStorage() string
+	GetEnv() string
+	GetDbStorage() string
 }

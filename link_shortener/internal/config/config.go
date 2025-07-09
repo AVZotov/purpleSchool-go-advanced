@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"log"
 	"os"
@@ -9,74 +8,74 @@ import (
 )
 
 type MailService struct {
-	name     string `yaml:"name" env-required:"true"`
-	email    string `yaml:"email" env-required:"true"`
-	password string `yaml:"password" env-required:"true"`
-	host     string `yaml:"host" env-required:"true"`
-	port     string `yaml:"port" env-required:"true"`
-	address  string `yaml:"address" env-required:"true"`
+	Name     string `yaml:"name" env-required:"true"`
+	Email    string `yaml:"email" env-required:"true"`
+	Password string `yaml:"password" env-required:"true"`
+	Host     string `yaml:"host" env-required:"true"`
+	Port     string `yaml:"port" env-required:"true"`
+	Address  string `yaml:"address" env-required:"true"`
 }
 
-func (m MailService) Name() string {
-	return m.name
+func (m MailService) GetName() string {
+	return m.Name
 }
 
-func (m MailService) Email() string {
-	return m.email
+func (m MailService) GetEmail() string {
+	return m.Email
 }
 
-func (m MailService) Password() string {
-	return m.password
+func (m MailService) GetPassword() string {
+	return m.Password
 }
 
-func (m MailService) Host() string {
-	return m.host
+func (m MailService) GetHost() string {
+	return m.Host
 }
 
-func (m MailService) Port() string {
-	return m.port
+func (m MailService) GetPort() string {
+	return m.Port
 }
 
-func (m MailService) Address() string {
-	return m.address
+func (m MailService) GetAddress() string {
+	return m.Address
 }
 
 type HttpServer struct {
-	address     string        `yaml:"address" env-default:"http://localhost:8080"`
-	port        string        `yaml:"port" env-default:"8080"`
-	timeout     time.Duration `yaml:"timeout" env-default:"4s"`
-	idleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	Address     string        `yaml:"address" env-default:"http://localhost:8080"`
+	Port        string        `yaml:"port" env-default:"8080"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
-func (h HttpServer) Address() string {
-	return h.address
+func (h HttpServer) GetAddress() string {
+	return h.Address
 }
 
-func (h HttpServer) Port() string {
-	return h.port
+func (h HttpServer) GetPort() string {
+	return h.Port
 }
 
-func (h HttpServer) Timeout() time.Duration {
-	return h.timeout
+func (h HttpServer) GetTimeout() time.Duration {
+	return h.Timeout
 }
 
-func (h HttpServer) IdleTimeout() time.Duration {
-	return h.idleTimeout
+func (h HttpServer) GetIdleTimeout() time.Duration {
+	return h.IdleTimeout
 }
 
 type Config struct {
-	env         string `yaml:"env" env-required:"true"`
-	dbStorage   string `yaml:"db_storage" env-required:"true"`
+	Env         string `yaml:"env" env-required:"true"`
+	DbStorage   string `yaml:"db_storage" env-required:"true"`
 	MailService `yaml:"mail_service" env-required:"true"`
 	HttpServer  `yaml:"http_server" env-required:"true"`
 }
 
-func (c Config) Env() string {
-	return c.env
+func (c Config) GetEnv() string {
+	return c.Env
 }
 
-func (c Config) DbStorage() string {
-	return c.dbStorage
+func (c Config) GetDbStorage() string {
+	return c.DbStorage
 }
 
 func MustLoadConfig(configPath string) *Config {
@@ -90,7 +89,6 @@ func MustLoadConfig(configPath string) *Config {
 		log.Fatal(err)
 		return nil
 	}
-	fmt.Printf("configs: %#v\n", config)
 
 	return &config
 }

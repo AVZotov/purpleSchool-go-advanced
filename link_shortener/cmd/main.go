@@ -32,18 +32,16 @@ func main() {
 
 	configPath := path.Join(ConfigPath, DevFile)
 	configs := config.MustLoadConfig(configPath)
-	fmt.Println(configPath)
-	fmt.Printf("configs: %#v\n", configs)
 
-	slogLogger := logger.NewLogger(configs.Env())
+	slogLogger := logger.NewLogger(configs.GetEnv())
 	slogLogger.With(fn)
 
-	slogLogger.Info(fmt.Sprintf("env config: %s", configs.Env()))
+	slogLogger.Info(fmt.Sprintf("env config: %s", configs.GetEnv()))
 
 	handlersLogger := logger.NewWrapper(slogLogger)
 	storageLogger := storageLoggerWrapper.New(slogLogger)
 
-	localStorage, err := storage.New(configs.Env(), storageLogger)
+	localStorage, err := storage.New(configs.GetEnv(), storageLogger)
 	if err != nil {
 		slogLogger.Error(fmt.Sprintf("%s: %v", fn, err))
 		return
@@ -57,9 +55,9 @@ func main() {
 		return
 	}
 
-	slogLogger.Info("Starting server on port " + configs.HttpServer.Port())
+	slogLogger.Info("Starting server on port " + configs.HttpServer.GetPort())
 
-	server := httpserver.NewServer(configs.HttpServer.Port(), router)
+	server := httpserver.NewServer(configs.HttpServer.GetPort(), router)
 
 	err = server.ListenAndServe()
 	if err != nil {

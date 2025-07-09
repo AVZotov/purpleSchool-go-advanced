@@ -27,14 +27,14 @@ func New(router *http.ServeMux, secrets t.MailService, logger t.Logger) error {
 func (h *Handler) emailInfo() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		info := map[string]interface{}{
-			"provider": h.Secrets.Name(),
-			"host":     h.Secrets.Host(),
-			"port":     h.Secrets.Port(),
-			"from":     h.Secrets.Email(),
+			"provider": h.Secrets.GetName(),
+			"host":     h.Secrets.GetHost(),
+			"port":     h.Secrets.GetPort(),
+			"from":     h.Secrets.GetEmail(),
 		}
 
-		if h.Secrets.Name() == "mailhog" {
-			info["web_ui"] = fmt.Sprintf("http://%s:8025", h.Secrets.Host())
+		if h.Secrets.GetName() == "mailhog" {
+			info["web_ui"] = fmt.Sprintf("http://%s:8025", h.Secrets.GetHost())
 			info["note"] = "MailHog development mode - all emails captured locally"
 		}
 
