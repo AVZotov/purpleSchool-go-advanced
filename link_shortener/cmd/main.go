@@ -1,62 +1,83 @@
 package main
 
 import (
-	"fmt"
-	"link_shortener/config"
+	"errors"
+	"link_shortener"
+	"link_shortener/internal/config"
 	"link_shortener/internal/http-server/handlers/email/info"
 	"link_shortener/internal/http-server/handlers/email/verify"
 	"link_shortener/internal/http-server/handlers/system"
-	r "link_shortener/internal/http-server/router"
-	s "link_shortener/internal/http-server/server"
-	"link_shortener/pkg/security"
-	"link_shortener/pkg/storage/local_storage"
+	"link_shortener/internal/http-server/router"
+	"link_shortener/internal/http-server/server"
+	"link_shortener/pkg/container"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 )
+
+const ConfigPath = "./config/env"
+const DevFile = "dev.yml"
 
 func main() {
 	defer func() {
 		if rec := recover(); rec != nil {
-			log.Printf("Recovered from panic: %v", rec)
+			log.Printf("Application panicked: %v", rec)
+			os.Exit(1)
 		}
 	}()
 
-	configs, err := config.NewConfig("mailhog")
+	log.Printf("Starting %s v%s (built: %s)", link_shortener.AppName, link_shortener.Version, link_shortener.BuildDate)
+
+	configPath := getConfigPath()
+	cfg := config.MustLoadConfig(configPath)
+
+	ctr, err := container.New(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to initialize container: %v", err)
 	}
-	storage, err := local_storage.NewStorage("dev")
+
+	mux := router.NewRouter()
+	err = registerHandlers(mux, ctr, cfg.MailService)
 	if err != nil {
-		log.Fatal(err)
-	}
-	emailSecrets, err := configs.GetEmailSecrets()
-	if err != nil {
-		log.Fatal(err)
-	}
-	router := r.NewRouter()
-	err = registerHandlers(router, emailSecrets, storage)
-	if err != nil {
-		log.Fatal(err)
+		ctr.Logger.Error("Failed to register handlers: %v", err)
 		return
 	}
-	server := s.NewServer("8081", router)
-	log.Println("Starting server on port 8081")
-	err = server.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
-		return
+
+	srv := server.New(cfg.HttpServer.Port, mux)
+
+	ctr.Logger.Info("Starting server",
+		"port", cfg.HttpServer.Port,
+		"env", cfg.Env)
+
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		ctr.Logger.Error("Server failed to start", "error", err)
+		os.Exit(1)
 	}
 }
 
-func registerHandlers(router *http.ServeMux, secrets []byte, storage *local_storage.Storage) error {
-	err := verify.NewVerificationHandler(router, secrets, security.NewHash(), storage)
-	if err != nil {
-		return fmt.Errorf("error creating 'NewVerificationHandler' handler: %s", err)
+func getConfigPath() string {
+	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
+		return configPath
 	}
-	err = info.NewInfoHandler(router, secrets)
+	return filepath.Join(ConfigPath, DevFile)
+}
+
+func registerHandlers(mux *http.ServeMux, ctr *container.Container, cfg config.MailService) error {
+	err := verify.New(mux, ctr.Logger, ctr.EmailService, ctr.HashService, ctr.Storage, ctr.Validator)
 	if err != nil {
-		return fmt.Errorf("error creating 'NewInfoHandler' handler: %s", err)
+		ctr.Logger.Error("Failed to register verification handler:", "error", err)
+		return err
 	}
-	system.NewHealthCheckHandler(router)
+
+	err = info.New(mux, ctr.Logger, cfg.Name, cfg.Host, cfg.Port)
+	if err != nil {
+		ctr.Logger.Error("Failed to register info handler:", "error", err)
+		return err
+	}
+
+	system.New(mux, ctr.Logger)
+
+	ctr.Logger.Debug("All handlers registered successfully")
 	return nil
 }

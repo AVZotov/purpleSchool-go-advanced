@@ -2,43 +2,59 @@ package local_storage
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"link_shortener/pkg/logger"
 	"os"
 	"path"
 	"strconv"
 )
 
 type Storage struct {
-	FileHandler *FileHandler
+	FileHandler *Handler
+	Log         logger.Logger
 }
 
-func NewStorage(devEnv string) (*Storage, error) {
-	fileHandler, err := newFileHandler(devEnv)
-	if err != nil {
-		return nil, err
+func New(devEnv string, log logger.Logger) (*Storage, error) {
+	const fn = "pkg.storage.local_storage.local_storage.new"
+	s := &Storage{
+		Log: log,
 	}
 
-	return &Storage{
-		FileHandler: fileHandler,
-	}, nil
+	s.Log.With(fn)
+
+	fileHandler, err := newHandler(devEnv, s.Log)
+	if err != nil {
+		s.Log.Error(err.Error())
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	s.FileHandler = fileHandler
+
+	log.Debug("new local storage created")
+
+	return s, nil
 }
 
 func (s *Storage) Save(email string, hash string) error {
-	fileName, err := getName(hash)
+	const fn = "pkg.storage.local_storage.local_storage.save"
+	s.Log.With(fn)
+	fileName, err := getName(hash, s.Log)
 	if err != nil {
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	if s.fileExists(fileName) {
-		return errors.New("file already exists")
+		s.Log.Warn(fmt.Sprintf("%s:%s already exists", fn, fileName))
+		return fmt.Errorf("%s:%s already exists", fn, fileName)
 	}
 
 	file, err := s.FileHandler.save(fileName)
 	if err != nil {
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 	defer file.Close()
 
@@ -46,92 +62,112 @@ func (s *Storage) Save(email string, hash string) error {
 
 	payload, err := json.Marshal(bin)
 	if err != nil {
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	_, err = file.Write(payload)
 	if err != nil {
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
+
+	s.Log.Debug("file saved to local storage")
 
 	return nil
 }
 
-func (s *Storage) Load(hash string) (_ map[string]string, err error) {
+func (s *Storage) Load(hash string) (map[string]string, error) {
+	const fn = "pkg.storage.local_storage.local_storage.load"
+	s.Log.With(fn)
 	details := make(map[string]string, 2)
-	fileName, err := getName(hash)
+	fileName, err := getName(hash, s.Log)
 	if err != nil {
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	if !s.fileExists(fileName) {
-		return nil, errors.New("file does not exist")
+		s.Log.Warn(fmt.Sprintf("%s:%s does not exists", fn, fileName))
+		return nil, fmt.Errorf("%s:%s does not exists", fn, fileName)
 	}
 
 	file, err := s.FileHandler.load(fileName)
 	if err != nil {
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	defer func() {
 		if err = file.Close(); err != nil {
-			fmt.Println("error closing file")
+			s.Log.Error(fn, err.Error(), "error closing file")
 		}
 	}()
 
 	payload, err := io.ReadAll(file)
 	if err != nil {
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	var bin Bin
 	err = json.Unmarshal(payload, &bin)
 	if err != nil {
-		return nil, err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	details["email"] = bin.Email
 	details["hash"] = bin.Hash
 
+	s.Log.Debug(fn, "file loaded from local storage")
+
 	return details, nil
 }
 
 func (s *Storage) Delete(hash string) error {
-	fileName, err := getName(hash)
+	const fn = "link_shortener.pkg.storage.local_storage.local_storage.Delete"
+	s.Log.With(fn)
+	fileName, err := getName(hash, s.Log)
 	if err != nil {
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
 	if !s.fileExists(fileName) {
-		return errors.New("file does not exist")
+		s.Log.Warn(fmt.Sprintf("%s:%s does not exists", fn, fileName))
+		return fmt.Errorf("%s:%s does not exists", fn, fileName)
 	}
 
 	err = s.FileHandler.delete(fileName)
 	if err != nil {
-		return err
+		s.Log.Error(fmt.Sprintf("%s: %s", fn, err.Error()))
+		return fmt.Errorf("%s: %w", fn, err)
 	}
 
+	s.Log.Debug("file deleted from local storage")
 	return nil
 }
 
-func getName(hash string) (string, error) {
+func getName(hash string, log logger.Logger) (string, error) {
+	log.With("link_shortener.pkg.storage.local_storage.local_storage.getName()")
 	hasher := fnv.New32a()
 	_, err := hasher.Write([]byte(hash))
 	if err != nil {
+		log.Error(err.Error())
 		return "", err
 	}
 	name := strconv.Itoa(int(hasher.Sum32()))
+
+	log.Debug(fmt.Sprintf("file name generated: %s.json", name))
+
 	return fmt.Sprintf("%s.json", name), nil
 }
 
 func (s *Storage) fileExists(fileName string) bool {
 	filePath := path.Join(s.FileHandler.WorkDir, fileName)
-	_, err := os.Stat(filePath)
-	if err == nil {
-		return true
-	}
-	if errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return false
 	}
-	return false
+	return true
 }

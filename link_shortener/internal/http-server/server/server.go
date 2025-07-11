@@ -7,7 +7,7 @@ type Server struct {
 	Handler *http.ServeMux
 }
 
-func NewServer(port string, router *http.ServeMux) *Server {
+func New(port string, router *http.ServeMux) *Server {
 	return &Server{
 		Port:    ":" + port,
 		Handler: router,

@@ -27,6 +27,7 @@ go.work.sum
 # env file
 .env
 .env.*
+link_shortener/config/env
 
 # json files
 *.json
@@ -37,3 +38,7 @@ Editor/IDE
 
 #pSQL local volume
 postgres-data/
+data/
+
+link_shortener/release.sh
+/qodana.yaml

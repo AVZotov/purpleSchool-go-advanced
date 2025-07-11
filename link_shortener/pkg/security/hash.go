@@ -8,7 +8,7 @@ import (
 
 type Hash struct{}
 
-func NewHash() *Hash {
+func NewHashHandler() *Hash {
 	return &Hash{}
 }
 
