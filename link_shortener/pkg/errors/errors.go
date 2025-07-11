@@ -118,7 +118,8 @@ func IsAppError(err error) bool {
 	return errors.As(err, &appErr)
 }
 
-func AsAppError(err error, v any) bool {
-	ok := errors.As(err, &v)
-	return ok
+func AsAppError(err error) (AppError, bool) {
+	var appErr AppError
+	ok := errors.As(err, &appErr)
+	return appErr, ok
 }

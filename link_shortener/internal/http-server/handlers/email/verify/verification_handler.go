@@ -51,7 +51,7 @@ type SendResponse struct {
 	Link    string `json:"verification_link"`
 }
 
-func New(logger l.Logger, emailService EmailService, hashService HashService,
+func New(mux *http.ServeMux, logger l.Logger, emailService EmailService, hashService HashService,
 	storage Storage, validator Validator) error {
 	handler := &Handler{
 		Handler:      base.Handler{Logger: logger},
@@ -67,7 +67,10 @@ func New(logger l.Logger, emailService EmailService, hashService HashService,
 	if err := handler.validator.Validate(handler); err != nil {
 		return errors.Wrap("invalid handler", err)
 	}
-	handler.Logger.Debug("verification handler created")
+
+	handler.RegisterRoutes(mux)
+
+	handler.Logger.Debug("verification handler created and routes registered")
 
 	return nil
 }

@@ -38,11 +38,10 @@ func (h *Handler) WriteJSON(w http.ResponseWriter, status int, data any) {
 }
 
 func (h *Handler) WriteError(w http.ResponseWriter, err error) {
-	var appErr errors.AppError
 	var status int
 	var errorInfo ErrorInfo
 
-	if errors.AsAppError(err, &appErr) {
+	if appErr, ok := errors.AsAppError(err); ok {
 		status = appErr.Status
 		errorInfo = ErrorInfo{
 			Code:    appErr.Code,
@@ -57,7 +56,7 @@ func (h *Handler) WriteError(w http.ResponseWriter, err error) {
 		}
 	}
 
-	h.Logger.Debug("app error struct:", appErr)
+	h.Logger.Debug("app error struct:")
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

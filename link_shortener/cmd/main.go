@@ -61,8 +61,8 @@ func getConfigPath() string {
 	return filepath.Join(ConfigPath, DevFile)
 }
 
-func registerHandlers(router *http.ServeMux, ctr *container.Container) error {
-	err := verify.New(ctr.Logger, ctr.EmailService, ctr.HashService, ctr.Storage, ctr.Validator)
+func registerHandlers(mux *http.ServeMux, ctr *container.Container) error {
+	err := verify.New(mux, ctr.Logger, ctr.EmailService, ctr.HashService, ctr.Storage, ctr.Validator)
 	if err != nil {
 		ctr.Logger.Error("Failed to register verification handler:", "error", err)
 		return err
@@ -74,7 +74,7 @@ func registerHandlers(router *http.ServeMux, ctr *container.Container) error {
 	//	return fmt.Errorf("%s: %w", fn, err)
 	//}
 
-	system.NewHealthCheckHandler(router)
+	system.NewHealthCheckHandler(mux)
 
 	ctr.Logger.Debug("All handlers registered successfully")
 	return nil
