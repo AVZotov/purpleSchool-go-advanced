@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"link_shortener"
 	"link_shortener/internal/config"
+	"link_shortener/internal/http-server/handlers/email/info"
 	"link_shortener/internal/http-server/handlers/email/verify"
 	"link_shortener/internal/http-server/handlers/system"
 	"link_shortener/internal/http-server/router"
@@ -25,18 +27,18 @@ func main() {
 		}
 	}()
 
-	// Load configuration
+	log.Printf("Starting %s v%s (built: %s)", link_shortener.AppName, link_shortener.Version, link_shortener.BuildDate)
+
 	configPath := getConfigPath()
 	cfg := config.MustLoadConfig(configPath)
 
-	// Initialize container
 	ctr, err := container.New(cfg)
 	if err != nil {
 		log.Fatalf("Failed to initialize container: %v", err)
 	}
 
 	mux := router.NewRouter()
-	err = registerHandlers(mux, ctr)
+	err = registerHandlers(mux, ctr, cfg.MailService)
 	if err != nil {
 		ctr.Logger.Error("Failed to register handlers: %v", err)
 		return
@@ -61,18 +63,18 @@ func getConfigPath() string {
 	return filepath.Join(ConfigPath, DevFile)
 }
 
-func registerHandlers(mux *http.ServeMux, ctr *container.Container) error {
+func registerHandlers(mux *http.ServeMux, ctr *container.Container, cfg config.MailService) error {
 	err := verify.New(mux, ctr.Logger, ctr.EmailService, ctr.HashService, ctr.Storage, ctr.Validator)
 	if err != nil {
 		ctr.Logger.Error("Failed to register verification handler:", "error", err)
 		return err
 	}
 
-	//err := info.New(router, configs.MailService, logger)
-	//if err != nil {
-	//	logger.Error(fmt.Sprintf("%s: %v", fn, err))
-	//	return fmt.Errorf("%s: %w", fn, err)
-	//}
+	err = info.New(mux, ctr.Logger, cfg.Name, cfg.Host, cfg.Port)
+	if err != nil {
+		ctr.Logger.Error("Failed to register info handler:", "error", err)
+		return err
+	}
 
 	system.NewHealthCheckHandler(mux)
 

@@ -21,13 +21,17 @@ type Storage interface {
 	Delete(hash string) error
 }
 
+type Validator interface {
+	Validate(str any) error
+}
+
 type Container struct {
 	Config       *config.Config
 	Logger       logger.Logger
 	EmailService Service
 	HashService  *security.Hash
 	Storage      Storage
-	Validator    v.StructValidator
+	Validator    Validator
 }
 
 // New initiate new container with all dependencies needed to run the program
@@ -44,7 +48,7 @@ func New(config *config.Config) (*Container, error) {
 		return nil, errors.Wrap("could not create dbStorage", err)
 	}
 
-	validator := v.StructValidator{}
+	validator := &v.StructValidator{}
 
 	return &Container{
 		Config:       config,

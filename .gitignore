@@ -39,3 +39,5 @@ Editor/IDE
 #pSQL local volume
 postgres-data/
 data/
+
+link_shortener/release.sh

@@ -68,14 +68,14 @@ func New(mux *http.ServeMux, logger l.Logger, emailService EmailService, hashSer
 		return errors.Wrap("invalid handler", err)
 	}
 
-	handler.RegisterRoutes(mux)
+	handler.registerRoutes(mux)
 
 	handler.Logger.Debug("verification handler created and routes registered")
 
 	return nil
 }
 
-func (h *Handler) RegisterRoutes(router *http.ServeMux) {
+func (h *Handler) registerRoutes(router *http.ServeMux) {
 	router.HandleFunc("POST "+V1SEND, h.SendVerification)
 	router.HandleFunc("GET "+V1VERIFY, h.VerifyEmail)
 
@@ -93,7 +93,7 @@ func (h *Handler) SendVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.validator.Validate(req.Email); err != nil {
+	if err := h.validator.Validate(req); err != nil {
 		h.Logger.Error(errors.NewStructValidationError(err.Error()).Error())
 		h.WriteError(w, errors.NewStructValidationError(err.Error()))
 		return
