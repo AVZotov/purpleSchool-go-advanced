@@ -36,7 +36,7 @@ func GetContext() string {
 
 // LogContext short macros to return wrapped logging info with path to caller
 // package.function
-func LogContext(logger logger.Logger, level string, msg string, args ...any) {
+func _(logger logger.Logger, level string, msg string, args ...any) {
 	context := GetContext()
 	allArgs := append([]any{"context", context}, args...)
 

@@ -8,7 +8,7 @@ type Wrapper struct {
 	logger *slog.Logger
 }
 
-func NewWrapper(logger *slog.Logger) Logger {
+func _(logger *slog.Logger) Logger {
 	return &Wrapper{logger: logger}
 }
 

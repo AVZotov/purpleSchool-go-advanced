@@ -76,7 +76,7 @@ func registerHandlers(mux *http.ServeMux, ctr *container.Container, cfg config.M
 		return err
 	}
 
-	system.NewHealthCheckHandler(mux)
+	system.New(mux, ctr.Logger)
 
 	ctr.Logger.Debug("All handlers registered successfully")
 	return nil

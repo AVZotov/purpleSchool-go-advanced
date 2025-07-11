@@ -82,7 +82,7 @@ func NewNotFoundError(details string) AppError {
 	return err
 }
 
-func NewInternalError(details string) AppError {
+func _(details string) AppError {
 	err := ErrInternal
 	err.Details = details
 	return err
@@ -113,7 +113,7 @@ func Wrap(message string, err error) error {
 	return fmt.Errorf("%s: %w", message, err)
 }
 
-func IsAppError(err error) bool {
+func _(err error) bool {
 	var appErr AppError
 	return errors.As(err, &appErr)
 }
