@@ -41,3 +41,4 @@ postgres-data/
 data/
 
 link_shortener/release.sh
+/qodana.yaml
