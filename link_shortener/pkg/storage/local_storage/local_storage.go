@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	t "link_shortener/pkg/storage/types"
+	"link_shortener/pkg/logger"
 	"os"
 	"path"
 	"strconv"
@@ -13,10 +13,10 @@ import (
 
 type Storage struct {
 	FileHandler *Handler
-	Log         t.Logger
+	Log         logger.Logger
 }
 
-func New(devEnv string, log t.Logger) (*Storage, error) {
+func New(devEnv string, log logger.Logger) (*Storage, error) {
 	const fn = "pkg.storage.local_storage.local_storage.new"
 	s := &Storage{
 		Log: log,
@@ -149,7 +149,7 @@ func (s *Storage) Delete(hash string) error {
 	return nil
 }
 
-func getName(hash string, log t.Logger) (string, error) {
+func getName(hash string, log logger.Logger) (string, error) {
 	log.With("link_shortener.pkg.storage.local_storage.local_storage.getName()")
 	hasher := fnv.New32a()
 	_, err := hasher.Write([]byte(hash))

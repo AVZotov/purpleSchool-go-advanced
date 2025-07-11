@@ -1,22 +1,17 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"link_shortener/internal/config"
-	"link_shortener/internal/http-server/handlers/email/info"
 	"link_shortener/internal/http-server/handlers/email/verify"
 	"link_shortener/internal/http-server/handlers/system"
-	t "link_shortener/internal/http-server/handlers/types"
-	r "link_shortener/internal/http-server/router"
-	httpserver "link_shortener/internal/http-server/server"
-	"link_shortener/pkg/logger"
-	"link_shortener/pkg/security"
-	storage "link_shortener/pkg/storage/local_storage"
-	storageLoggerWrapper "link_shortener/pkg/storage/logger"
-	"link_shortener/pkg/validator"
+	"link_shortener/internal/http-server/router"
+	"link_shortener/internal/http-server/server"
+	"link_shortener/pkg/container"
 	"log"
 	"net/http"
-	"path"
+	"os"
+	"path/filepath"
 )
 
 const ConfigPath = "./config/env"
@@ -25,67 +20,62 @@ const DevFile = "dev.yml"
 func main() {
 	defer func() {
 		if rec := recover(); rec != nil {
-			log.Printf("Recovered from panic: %v", rec)
+			log.Printf("Application panicked: %v", rec)
+			os.Exit(1)
 		}
 	}()
-	const fn = "cmd.main.main"
 
-	configPath := path.Join(ConfigPath, DevFile)
-	configs := config.MustLoadConfig(configPath)
+	// Load configuration
+	configPath := getConfigPath()
+	cfg := config.MustLoadConfig(configPath)
 
-	slogLogger := logger.NewLogger(configs.GetEnv())
-	slogLogger.With(fn)
-
-	slogLogger.Info(fmt.Sprintf("env config: %s", configs.GetEnv()))
-
-	handlersLogger := logger.NewWrapper(slogLogger)
-	storageLogger := storageLoggerWrapper.New(slogLogger)
-
-	localStorage, err := storage.New(configs.GetEnv(), storageLogger)
+	// Initialize container
+	ctr, err := container.New(cfg)
 	if err != nil {
-		slogLogger.Error(fmt.Sprintf("%s: %v", fn, err))
+		log.Fatalf("Failed to initialize container: %v", err)
+	}
+
+	mux := router.NewRouter()
+	err = registerHandlers(mux, ctr)
+	if err != nil {
+		ctr.Logger.Error("Failed to register handlers: %v", err)
 		return
 	}
 
-	router := r.NewRouter()
+	srv := server.New(cfg.HttpServer.Port, mux)
 
-	err = registerHandlers(router, configs, localStorage, handlersLogger)
-	if err != nil {
-		slogLogger.Error(fmt.Sprintf("%s: %v", fn, err))
-		return
-	}
+	ctr.Logger.Info("Starting server",
+		"port", cfg.HttpServer.Port,
+		"env", cfg.Env)
 
-	slogLogger.Info("Starting server on port " + configs.HttpServer.GetPort())
-
-	server := httpserver.NewServer(configs.HttpServer.GetPort(), router)
-
-	err = server.ListenAndServe()
-	if err != nil {
-		slogLogger.Error(fmt.Sprintf("%s: %v", fn, err))
-		return
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		ctr.Logger.Error("Server failed to start", "error", err)
+		os.Exit(1)
 	}
 }
 
-func registerHandlers(router *http.ServeMux, configs *config.Config,
-	localStorage *storage.Storage, logger t.Logger) error {
-
-	const fn = "cmd.main.registerHandlers"
-	logger.With(fn)
-
-	structValidator := &validator.StructValidator{}
-
-	hashHandler := security.NewHashHandler()
-
-	verify.New(router, configs.MailService, hashHandler, localStorage, structValidator, logger)
-
-	err := info.New(router, configs.MailService, logger)
-	if err != nil {
-		logger.Error(fmt.Sprintf("%s: %v", fn, err))
-		return fmt.Errorf("%s: %w", fn, err)
+func getConfigPath() string {
+	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
+		return configPath
 	}
+	return filepath.Join(ConfigPath, DevFile)
+}
+
+func registerHandlers(router *http.ServeMux, ctr *container.Container) error {
+	err := verify.New(ctr.Logger, ctr.EmailService, ctr.HashService, ctr.Storage, ctr.Validator)
+	if err != nil {
+		ctr.Logger.Error("Failed to register verification handler:", "error", err)
+		return err
+	}
+
+	//err := info.New(router, configs.MailService, logger)
+	//if err != nil {
+	//	logger.Error(fmt.Sprintf("%s: %v", fn, err))
+	//	return fmt.Errorf("%s: %w", fn, err)
+	//}
 
 	system.NewHealthCheckHandler(router)
 
-	logger.Debug("All handlers registered successfully")
+	ctr.Logger.Debug("All handlers registered successfully")
 	return nil
 }

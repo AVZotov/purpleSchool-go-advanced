@@ -1,4 +1,4 @@
-package types
+package logger
 
 type Logger interface {
 	Debug(msg string, args ...any)
@@ -6,8 +6,4 @@ type Logger interface {
 	Warn(msg string, args ...any)
 	Error(msg string, args ...any)
 	With(args ...any) Logger
-}
-type Config interface {
-	GetEnv() string
-	GetDbStorage() string
 }

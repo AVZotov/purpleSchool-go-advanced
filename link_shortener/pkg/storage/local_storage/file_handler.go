@@ -3,7 +3,8 @@ package local_storage
 import (
 	"fmt"
 	"io"
-	t "link_shortener/pkg/storage/types"
+	"link_shortener/pkg/logger"
+	"link_shortener/pkg/utils"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,25 +14,23 @@ const TMPDIR = "tmp"
 
 type Handler struct {
 	WorkDir string
-	Log     t.Logger
+	Log     logger.Logger
 }
 
-func newHandler(env string, log t.Logger) (*Handler, error) {
-	const fn = "pkg.storage.local_storage.file_handler.newHandler"
+func newHandler(env string, logger logger.Logger) (*Handler, error) {
 	fh := &Handler{
-		Log: log,
+		Log: logger,
 	}
 
-	fh.Log.With(fn)
-	path, err := getFullPath(env, log)
+	path, err := getFullPath(env, logger)
 	if err != nil {
-		log.Error(err.Error())
-		return nil, fmt.Errorf("%s: %w", fn, err)
+		logger.Error(err.Error())
+		return nil, fmt.Errorf("%s: %w", utils.GetContext(), err)
 	}
 
 	fh.WorkDir = path
 
-	log.Debug("fileHandler initialized")
+	logger.Debug("fileHandler initialized")
 
 	return fh, nil
 }
@@ -82,7 +81,7 @@ func (h *Handler) delete(name string) error {
 	return nil
 }
 
-func getFullPath(env string, log t.Logger) (string, error) {
+func getFullPath(env string, log logger.Logger) (string, error) {
 	const fn = "pkg.storage.local_storage.file_handler.getFullPath"
 	log.With(fn)
 

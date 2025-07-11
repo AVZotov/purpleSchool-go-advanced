@@ -1,7 +1,6 @@
 package logger
 
 import (
-	t "link_shortener/internal/http-server/handlers/types"
 	"log/slog"
 )
 
@@ -9,7 +8,7 @@ type Wrapper struct {
 	logger *slog.Logger
 }
 
-func NewWrapper(logger *slog.Logger) t.Logger {
+func NewWrapper(logger *slog.Logger) Logger {
 	return &Wrapper{logger: logger}
 }
 
@@ -29,6 +28,6 @@ func (w *Wrapper) Error(msg string, args ...any) {
 	w.logger.Error(msg, args...)
 }
 
-func (w *Wrapper) With(args ...any) t.Logger {
+func (w *Wrapper) With(args ...any) Logger {
 	return &Wrapper{logger: w.logger.With(args...)}
 }

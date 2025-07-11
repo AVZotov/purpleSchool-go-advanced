@@ -1,94 +1,114 @@
 package config
 
 import (
+	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"log"
 	"os"
 	"time"
 )
 
+type Environment string
+
+const (
+	EnvLoc  = "loc"
+	EnvDev  = "dev"
+	EnvProd = "prod"
+	EnvTest = "test"
+)
+
+func (e Environment) String() string {
+	return string(e)
+}
+
+func (e Environment) IsLoc() bool {
+	return e == EnvLoc
+}
+
+func (e Environment) IsDev() bool {
+	return e == EnvDev
+}
+
+func (e Environment) IsProd() bool {
+	return e == EnvProd
+}
+
+func (e Environment) IsTest() bool {
+	return e == EnvTest
+}
+
 type MailService struct {
-	Name     string `yaml:"name" env-required:"true"`
-	Email    string `yaml:"email" env-required:"true"`
-	Password string `yaml:"password" env-required:"true"`
-	Host     string `yaml:"host" env-required:"true"`
-	Port     string `yaml:"port" env-required:"true"`
-	Address  string `yaml:"address" env-required:"true"`
-}
-
-func (m MailService) GetName() string {
-	return m.Name
-}
-
-func (m MailService) GetEmail() string {
-	return m.Email
-}
-
-func (m MailService) GetPassword() string {
-	return m.Password
-}
-
-func (m MailService) GetHost() string {
-	return m.Host
-}
-
-func (m MailService) GetPort() string {
-	return m.Port
-}
-
-func (m MailService) GetAddress() string {
-	return m.Address
+	Name     string `yaml:"name" env:"MAIL_NAME" env-required:"true"`
+	Email    string `yaml:"email" env:"MAIL_EMAIL" env-required:"true"`
+	Password string `yaml:"password" env:"MAIL_PASSWORD"`
+	Schema   string `yaml:"schema" env:"MAIL_SCHEMA" env-required:"true"`
+	Host     string `yaml:"host" env:"MAIL_HOST" env-required:"true"`
+	Port     string `yaml:"port" env:"MAIL_PORT"`
+	Address  string `yaml:"address" env:"MAIL_ADDRESS"`
 }
 
 type HttpServer struct {
-	Address     string        `yaml:"address" env-default:"http://localhost:8080"`
-	Port        string        `yaml:"port" env-default:"8080"`
-	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	Schema      string        `yaml:"schema" env:"HTTP_SCHEMA" env-required:"true"`
+	Host        string        `yaml:"host" env:"HTTP_HOST" env-required:"true"`
+	Port        string        `yaml:"port" env:"HTTP_PORT" env-default:"8080"`
+	Address     string        `yaml:"address" env:"HTTP_ADDRESS"`
+	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"4s"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 }
 
-func (h HttpServer) GetAddress() string {
-	return h.Address
+type Database struct {
+	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
+	Port     string `yaml:"port" env:"DB_PORT" env-default:"5432"`
+	User     string `yaml:"user" env:"DB_USER" env-required:"true"`
+	Password string `yaml:"password" env:"DB_PASSWORD" env-required:"true"`
+	Name     string `yaml:"name" env:"DB_NAME" env-required:"true"`
+	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
 }
 
-func (h HttpServer) GetPort() string {
-	return h.Port
-}
-
-func (h HttpServer) GetTimeout() time.Duration {
-	return h.Timeout
-}
-
-func (h HttpServer) GetIdleTimeout() time.Duration {
-	return h.IdleTimeout
+func (d Database) PsqlDSN() string {
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		d.Host, d.Port, d.User, d.Password, d.Name, d.SSLMode)
+	return dsn
 }
 
 type Config struct {
-	Env         string `yaml:"env" env-required:"true"`
-	DbStorage   string `yaml:"db_storage" env-required:"true"`
-	MailService `yaml:"mail_service" env-required:"true"`
-	HttpServer  `yaml:"http_server" env-required:"true"`
-}
-
-func (c Config) GetEnv() string {
-	return c.Env
-}
-
-func (c Config) GetDbStorage() string {
-	return c.DbStorage
+	Env         Environment `yaml:"env" env:"APP_ENV" env-required:"true"`
+	MailService MailService `yaml:"mail_service"`
+	HttpServer  HttpServer  `yaml:"http_server"`
+	//Database    Database    `yaml:"database"`
 }
 
 func MustLoadConfig(configPath string) *Config {
+	config, err := loadConfig(configPath)
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+	return config
+}
+
+func loadConfig(configPath string) (*Config, error) {
+	if configPath == "" {
+		return loadFromEnv()
+	}
+
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exist: %s", configPath)
-		return nil
+		log.Printf("Config file does not exist: %s, trying environment variables", configPath)
+		return loadFromEnv()
 	}
+
 	var config Config
-
 	if err := cleanenv.ReadConfig(configPath, &config); err != nil {
-		log.Fatal(err)
-		return nil
+		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
-	return &config
+	return &config, nil
+}
+
+func loadFromEnv() (*Config, error) {
+	var config Config
+	if err := cleanenv.ReadEnv(&config); err != nil {
+		return nil, fmt.Errorf("failed to read environment variables: %w", err)
+	}
+
+	return &config, nil
 }
