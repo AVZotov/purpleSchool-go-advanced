@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"link_shortener"
+	mainversion "link_shortener"
 	"link_shortener/internal/config"
 	"link_shortener/internal/http-server/handlers/email/info"
 	"link_shortener/internal/http-server/handlers/email/verify"
@@ -27,7 +27,7 @@ func main() {
 		}
 	}()
 
-	log.Printf("Starting %s v%s (built: %s)", link_shortener.AppName, link_shortener.Version, link_shortener.BuildDate)
+	log.Printf("Starting %s v%s (built: %s)", mainversion.AppName, mainversion.Version, mainversion.BuildDate)
 
 	configPath := getConfigPath()
 	cfg := config.MustLoadConfig(configPath)

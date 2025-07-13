@@ -1,4 +1,4 @@
-package main
+package main_version
 
 const (
 	Version   = "0.10.0"
