@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func NewRouter() *http.ServeMux {
+func New() *http.ServeMux {
 	router := http.NewServeMux()
 	return router
 }
