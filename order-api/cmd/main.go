@@ -14,9 +14,14 @@ const DevFile = "configs.yml"
 
 func main() {
 	cfg := config.MustLoadConfig(path.Join(ConfigPath, DevFile))
+
 	database, err := db.New(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to connect to database:", err)
+	}
+
+	if err = database.RunMigrations(); err != nil {
+		log.Fatal("Failed to run migrations:", err)
 	}
 
 	r := router.New(database)

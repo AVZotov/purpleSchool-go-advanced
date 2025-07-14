@@ -8,7 +8,6 @@ import (
 
 const (
 	HealthV1 = "/api/v1/health"
-	Health   = "/health"
 )
 
 type Handler struct {
@@ -25,7 +24,6 @@ func New(mux *http.ServeMux) {
 
 func (h *Handler) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET "+HealthV1, h.health)
-	mux.HandleFunc("GET "+Health, h.health)
 }
 
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
