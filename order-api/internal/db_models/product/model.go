@@ -3,6 +3,7 @@ package product
 import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
+	"net/url"
 	"order/pkg/validator"
 )
 
@@ -10,7 +11,7 @@ type Product struct {
 	gorm.Model
 	Name        string         `json:"name" validate:"required"`
 	Description string         `json:"description" validate:"required"`
-	Images      pq.StringArray `json:"image,omitempty" validate:"url"`
+	Images      pq.StringArray `json:"image,omitempty" gorm:"type:text[]"`
 }
 
 func New(name string, description string, images ...string) *Product {
@@ -23,5 +24,14 @@ func New(name string, description string, images ...string) *Product {
 
 func (p *Product) Validate() error {
 	v := validator.New()
-	return v.Validate(p)
+	if err := v.Validate(p); err != nil {
+		return err
+	}
+
+	for _, imageURL := range p.Images {
+		if _, err := url.Parse(imageURL); err != nil {
+			return err
+		}
+	}
+	return nil
 }

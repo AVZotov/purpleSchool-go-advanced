@@ -14,12 +14,12 @@ const DevFile = "configs.yml"
 
 func main() {
 	cfg := config.MustLoadConfig(path.Join(ConfigPath, DevFile))
-	_, err := db.New(cfg)
+	database, err := db.New(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	r := router.New()
+	r := router.New(database)
 	s := server.New(cfg.HttpServer.Port, r)
 	log.Print("Listening on port ", cfg.HttpServer.Port)
 	err = s.ListenAndServe()
