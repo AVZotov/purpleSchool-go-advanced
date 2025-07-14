@@ -1,16 +1,21 @@
 package product
 
-import "gorm.io/gorm"
+import (
+	"github.com/lib/pq"
+	"gorm.io/gorm"
+)
 
 type Product struct {
 	gorm.Model
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Image       pq.StringArray `json:"image"`
 }
 
-func New(name string, description string) *Product {
+func New(name string, description string, images ...string) *Product {
 	return &Product{
 		Name:        name,
 		Description: description,
+		Image:       images,
 	}
 }
