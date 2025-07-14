@@ -9,11 +9,10 @@ import (
 	"path"
 )
 
-const ConfigPath = "./config/env"
 const DevFile = "configs.yml"
 
 func main() {
-	cfg := config.MustLoadConfig(path.Join(ConfigPath, DevFile))
+	cfg := config.MustLoadConfig(path.Join(DevFile))
 
 	database, err := db.New(cfg)
 	if err != nil {
