@@ -10,14 +10,14 @@ type Product struct {
 	gorm.Model
 	Name        string         `json:"name" validate:"required"`
 	Description string         `json:"description" validate:"required"`
-	Image       pq.StringArray `json:"image,omitempty" validate:"url"`
+	Images      pq.StringArray `json:"image,omitempty" validate:"url"`
 }
 
 func New(name string, description string, images ...string) *Product {
 	return &Product{
 		Name:        name,
 		Description: description,
-		Image:       images,
+		Images:      images,
 	}
 }
 
