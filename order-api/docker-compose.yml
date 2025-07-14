@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16.4-alpine3.20
-    container_name: link_shortener_postgres
+    container_name: order_api_postgres
     ports:
       - "5432:5432"
     environment:
@@ -13,7 +13,7 @@ services:
       - ./data:/var/lib/postgresql/data/pgdata
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d link_shortener"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d order_api"]
       interval: 10s
       timeout: 5s
       retries: 5
