@@ -7,15 +7,16 @@ import (
 
 type Product struct {
 	gorm.Model
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Image       pq.StringArray `json:"image"`
+	Name        string         `json:"name" validate:"required"`
+	Description string         `json:"description" validate:"required"`
+	Image       pq.StringArray `json:"image,omitempty"`
 }
 
-func New(name string, description string, images ...string) *Product {
-	return &Product{
+func New(name string, description string, images ...string) (*Product, error) {
+	p := &Product{
 		Name:        name,
 		Description: description,
 		Image:       images,
 	}
+
 }
