@@ -7,10 +7,8 @@ import (
 	"order/internal/config"
 	"order/internal/db_models/product"
 	"os"
-	"path"
 )
 
-const ConfigPath = "./config/env"
 const DevFile = "configs.yml"
 
 func main() {
@@ -21,7 +19,7 @@ func main() {
 		}
 	}()
 
-	DSN := config.MustLoadConfig(path.Join(ConfigPath, DevFile)).Database.PsqlDSN()
+	DSN := config.MustLoadConfig(DevFile).Database.PsqlDSN()
 
 	db, err := gorm.Open(postgres.Open(DSN), &gorm.Config{})
 	if err != nil {

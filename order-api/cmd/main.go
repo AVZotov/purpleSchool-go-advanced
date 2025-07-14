@@ -6,13 +6,12 @@ import (
 	"order/internal/http_server/router"
 	"order/internal/http_server/server"
 	"order/pkg/db"
-	"path"
 )
 
 const DevFile = "configs.yml"
 
 func main() {
-	cfg := config.MustLoadConfig(path.Join(DevFile))
+	cfg := config.MustLoadConfig(DevFile)
 
 	database, err := db.New(cfg)
 	if err != nil {
