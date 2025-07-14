@@ -4,6 +4,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"order/internal/config"
+	"order/internal/db_models/product"
 )
 
 type DB struct {
@@ -17,4 +18,10 @@ func New(config *config.Config) (*DB, error) {
 	}
 
 	return &DB{db}, nil
+}
+
+func (db *DB) RunMigrations() error {
+	return db.AutoMigrate(
+		&product.Product{},
+	)
 }

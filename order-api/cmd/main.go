@@ -21,9 +21,9 @@ func main() {
 
 	r := router.New(database)
 	s := server.New(cfg.HttpServer.Port, r)
-	log.Print("Listening on port ", cfg.HttpServer.Port)
-	err = s.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
+
+	log.Printf("Server starting on port %s", cfg.HttpServer.Port)
+	if err = s.ListenAndServe(); err != nil {
+		log.Fatal("Server failed to start:", err)
 	}
 }
