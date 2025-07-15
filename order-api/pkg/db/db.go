@@ -6,7 +6,8 @@ import (
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 	"order/internal/config"
-	appLogger "order/pkg/logger"
+	"order/internal/db_models/product"
+	pkgLogger "order/pkg/logger"
 	"time"
 )
 
@@ -14,7 +15,7 @@ type DB struct {
 	*gorm.DB
 }
 
-func New(config *config.Config, appLogger appLogger.Logger) (*DB, error) {
+func New(config *config.Config, appLogger pkgLogger.Logger) (*DB, error) {
 	appLogger.Info("Initializing database connection",
 		"host", config.Database.Host,
 		"port", config.Database.Port,
@@ -49,6 +50,22 @@ func New(config *config.Config, appLogger appLogger.Logger) (*DB, error) {
 	appLogger.Info("Database connection established successfully")
 
 	return dbStruct, nil
+}
+
+func (db *DB) RunMigrations(appLogger pkgLogger.Logger) error {
+	appLogger.Info("Starting database migrations...")
+
+	err := db.AutoMigrate(
+		&product.Product{},
+		// I can add additional models for registration here
+	)
+	if err != nil {
+		appLogger.Error("Failed to run migrations", "error", err)
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	appLogger.Info("Database migrations completed successfully")
+	return nil
 }
 
 func getGormLogLevel(env string) gormLogger.LogLevel {
