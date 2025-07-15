@@ -6,12 +6,23 @@ import (
 	"order/internal/http_server/router"
 	"order/internal/http_server/server"
 	"order/pkg/db"
+	"os"
 )
 
 const DevFile = "configs.yml"
 
 func main() {
-	cfg := config.MustLoadConfig(DevFile)
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("Application panicked: %v", rec)
+			os.Exit(1)
+		}
+	}()
+
+	cfg, err := config.MustLoadConfig(DevFile)
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
 
 	database, err := db.New(cfg)
 	if err != nil {

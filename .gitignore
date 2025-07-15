@@ -28,7 +28,7 @@ go.work.sum
 .env
 .env.*
 link_shortener/config/env
-# order-api/config/env
+order-api/config/env
 
 # json files
 *.json

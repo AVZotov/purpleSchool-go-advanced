@@ -63,12 +63,12 @@ type Config struct {
 	HttpServer HttpServer  `yaml:"http_server" env:"HTTP_SERVER" env-required:"true"`
 }
 
-func MustLoadConfig(configPath string) *Config {
+func MustLoadConfig(configPath string) (*Config, error) {
 	config, err := loadConfig(configPath)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		return nil, err
 	}
-	return config
+	return config, nil
 }
 
 func loadConfig(configPath string) (*Config, error) {
