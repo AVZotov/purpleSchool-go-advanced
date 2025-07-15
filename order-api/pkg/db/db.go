@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"log"
+	gormLogger "gorm.io/gorm/logger"
 	"order/internal/config"
-	"order/internal/db_models/product"
-	"os"
+	appLogger "order/pkg/logger"
 	"time"
 )
 
@@ -16,51 +14,50 @@ type DB struct {
 	*gorm.DB
 }
 
-func New(config *config.Config) (*DB, error) {
-	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags),
-		logger.Config{
-			SlowThreshold:             time.Second,
-			LogLevel:                  logger.Info,
-			IgnoreRecordNotFoundError: true,
-			Colorful:                  true,
-		},
+func New(config *config.Config, appLogger appLogger.Logger) (*DB, error) {
+	appLogger.Info("Initializing database connection",
+		"host", config.Database.Host,
+		"port", config.Database.Port,
+		"database", config.Database.Name,
 	)
 
+	gLogger := NewGormLogger(appLogger, gormLogger.Config{
+		SlowThreshold:             time.Second,
+		LogLevel:                  getGormLogLevel(config.Env.String()),
+		IgnoreRecordNotFoundError: true,
+		Colorful:                  config.Env.IsDev(),
+	})
+
 	dsn := config.Database.PsqlDSN()
-	fmt.Printf("Connecting to database with DSN: %s\n", dsn)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: newLogger,
+		Logger: gLogger,
 	})
 	if err != nil {
+		appLogger.Error("Failed to connect to database", "error", err)
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	dbStruct := &DB{
+		DB: db,
 	}
 
-	if err = sqlDB.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+	if err = dbStruct.HealthCheck(appLogger); err != nil {
+		return nil, err
 	}
 
-	fmt.Println("Database connection established successfully")
-	return &DB{db}, nil
+	appLogger.Info("Database connection established successfully")
+
+	return dbStruct, nil
 }
 
-func (db *DB) RunMigrations() error {
-	fmt.Println("Starting database migrations...")
-
-	err := db.AutoMigrate(
-		&product.Product{},
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
+func getGormLogLevel(env string) gormLogger.LogLevel {
+	switch env {
+	case "dev":
+		return gormLogger.Info
+	case "prod":
+		return gormLogger.Error
+	default:
+		return gormLogger.Warn
 	}
-
-	fmt.Println("Database migrations completed successfully")
-	return nil
 }
