@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	version "order"
 	"order/internal/config"
 	"order/pkg/container"
 	"os"
@@ -18,6 +19,8 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
+	log.Printf("Starting %s v%s (built: %s)", version.AppName, version.Version, version.BuildDate)
 
 	cfg, err := config.MustLoadConfig(DevFile)
 	if err != nil {

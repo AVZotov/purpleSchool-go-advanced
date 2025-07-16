@@ -7,7 +7,7 @@ import (
 	pkgLogger "order/pkg/logger"
 )
 
-const DomainProductRoot = "/api/V1/product"
+const DomainProductRoot = "/api/v1/products"
 
 type Handler struct {
 	base.Handler
@@ -27,19 +27,23 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var product Product
-	var err error
 
-	err = h.ParseJSON(r, &product)
+	err := h.ParseJSON(r, &product)
 	if err != nil {
-		h.Logger.Error(pkgErrors.NewJsonUnmarshalError("").Error())
-		h.WriteError(w, pkgErrors.NewJsonUnmarshalError(""))
+		h.Logger.Error("Failed to parse JSON", "error", err)
+		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("invalid JSON format"))
+		return
 	}
 
 	if err = h.repository.Create(&product); err != nil {
-		h.Logger.Error(pkgErrors.NewRecordNotCreatedError("").Error())
+		h.Logger.Error("Failed to create product", "error", err)
 		h.WriteError(w, pkgErrors.NewRecordNotCreatedError(err.Error()))
 		return
 	}
 
-	h.Logger.Info("product created", "ID: ", product.ID)
+	h.Logger.Info("Product created successfully", "id", product.ID)
+	h.WriteJSON(w, http.StatusCreated, map[string]interface{}{
+		"id":      product.ID,
+		"message": "Product created successfully",
+	})
 }

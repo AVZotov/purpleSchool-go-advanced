@@ -22,15 +22,13 @@ type Container struct {
 
 type Module struct {
 	Name  string
-	Model any
 	Setup func(*http.ServeMux, *db.DB, pkgLogger.Logger)
 }
 
 func getDomainModules() []Module {
 	return []Module{
 		{
-			Name:  "Product",
-			Model: &product.Product{},
+			Name: "Product",
 			Setup: func(mux *http.ServeMux, database *db.DB, appLogger pkgLogger.Logger) {
 				repository := product.NewRepository(database)
 				handler := product.NewHandler(repository, appLogger)
@@ -50,7 +48,7 @@ func New(configs *config.Config) (*Container, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	if err = migrations.RunMigrations(database.DB, appLogger, getModels()); err != nil {
+	if err = migrations.RunMigrations(database.DB, appLogger); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -60,7 +58,7 @@ func New(configs *config.Config) (*Container, error) {
 
 	mux := http.NewServeMux()
 
-	registerRoutes(mux, database, appLogger)
+	registerHandlersRoutes(mux, database, appLogger)
 
 	srv := server.New(configs.HttpServer.Port, mux)
 
@@ -73,23 +71,14 @@ func New(configs *config.Config) (*Container, error) {
 	}, nil
 }
 
-func registerRoutes(mux *http.ServeMux, database *db.DB, appLogger pkgLogger.Logger) {
+func registerHandlersRoutes(
+	mux *http.ServeMux, database *db.DB, appLogger pkgLogger.Logger) {
 	system.New(mux)
 	modules := getDomainModules()
 	for _, module := range modules {
 		appLogger.Debug("Registering module", "name", module.Name)
 		module.Setup(mux, database, appLogger)
 	}
-}
-
-func getModels() []any {
-	modules := getDomainModules()
-	var models []any
-
-	for _, module := range modules {
-		models = append(models, module.Model)
-	}
-	return models
 }
 
 func (c *Container) Start() error {
