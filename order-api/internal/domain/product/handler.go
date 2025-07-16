@@ -54,15 +54,28 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	strId := r.PathValue("id")
-	if err := h.repository.Delete(strId); err != nil {
+	idStr := r.PathValue("id")
+	if err := h.repository.Delete(idStr); err != nil {
+		if appError, ok := pkgErrors.AsAppError(err); ok {
+			switch appError.Code {
+			case pkgErrors.ErrNotFound.Code:
+				h.Logger.Warn("Product not found", "id", idStr)
+				h.WriteError(w, pkgErrors.NewNotFoundError(idStr))
+				return
+			case pkgErrors.ErrInvalidId.Code:
+				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
+				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
+				return
+			}
+		}
 		h.Logger.Error("Failed to delete product", "error", err)
-		h.WriteError(w, pkgErrors.NewInvalidIdError(err.Error()))
+		h.WriteError(w, err)
 		return
 	}
-	h.Logger.Info("Product deleted successfully", "id", strId)
+
+	h.Logger.Info("Product deleted successfully", "id", idStr)
 	h.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"id":      strId,
+		"id":      idStr,
 		"message": "Product deleted successfully",
 	})
 }

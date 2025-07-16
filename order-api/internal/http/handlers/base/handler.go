@@ -72,7 +72,6 @@ func (h *Handler) WriteError(w http.ResponseWriter, err error) {
 	if err = json.NewEncoder(w).Encode(response); err != nil {
 		h.Logger.Error(pkgErrors.NewJsonMarshalError("").Error())
 	}
-	h.Logger.Error("HTTP error", "status", status, "error", err)
 }
 
 func (h *Handler) ParseJSON(r *http.Request, v any) error {
