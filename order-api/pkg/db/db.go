@@ -55,8 +55,8 @@ func (db *DB) Create(v any) error {
 	return db.DB.Create(v).Error
 }
 
-func (db *DB) Delete(id uint) error {
-	return db.DB.Delete(id).Error
+func (db *DB) Delete(module any, conditions ...any) error {
+	return db.DB.Delete(module, conditions).Error
 }
 
 func getGormLogLevel(env string) gormLogger.LogLevel {

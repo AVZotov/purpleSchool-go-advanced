@@ -30,7 +30,7 @@ func (r *Repository) Delete(idStr string) error {
 	if err != nil {
 		return err
 	}
-	err = r.db.Delete(uint(id))
+	err = r.db.Delete(&Product{}, id)
 	if err != nil {
 		return err
 	}
