@@ -52,20 +52,8 @@ func New(config *config.Config, appLogger pkgLogger.Logger) (*DB, error) {
 	return dbStruct, nil
 }
 
-func (db *DB) RunMigrations(appLogger pkgLogger.Logger) error {
-	appLogger.Info("Starting database migrations...")
-
-	err := db.AutoMigrate(
-		&product.Product{},
-		// I can add additional models for registration here
-	)
-	if err != nil {
-		appLogger.Error("Failed to run migrations", "error", err)
-		return fmt.Errorf("failed to run migrations: %w", err)
-	}
-
-	appLogger.Info("Database migrations completed successfully")
-	return nil
+func (db *DB) CreateWithLogging(product *product.Product) error {
+	return db.DB.Create(product).Error
 }
 
 func getGormLogLevel(env string) gormLogger.LogLevel {
