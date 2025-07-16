@@ -2,7 +2,6 @@ package base
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	pkgErrors "order/pkg/errors"
 	pkgLogger "order/pkg/logger"
@@ -78,7 +77,8 @@ func (h *Handler) WriteError(w http.ResponseWriter, err error) {
 
 func (h *Handler) ParseJSON(r *http.Request, v any) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		return errors.New("invalid JSON format")
+		return pkgErrors.NewJsonUnmarshalError("")
 	}
+
 	return nil
 }

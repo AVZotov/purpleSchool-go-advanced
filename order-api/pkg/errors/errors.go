@@ -46,6 +46,12 @@ var (
 		Message: "Resource not found",
 		Status:  http.StatusNotFound,
 	}
+
+	ErrRecordNotCreated = AppError{
+		Code:    "RECORD_NOT_CREATED",
+		Message: "Record not created",
+		Status:  http.StatusBadRequest,
+	}
 )
 
 func NewJsonUnmarshalError(details string) AppError {
@@ -68,6 +74,12 @@ func NewInvalidIdError(details string) AppError {
 
 func NewNotFoundError(details string) AppError {
 	err := ErrNotFound
+	err.Details = details
+	return err
+}
+
+func NewRecordNotCreatedError(details string) AppError {
+	err := ErrRecordNotCreated
 	err.Details = details
 	return err
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"order/internal/config"
-	"order/internal/db_models/product"
+	"order/internal/domain/product"
 	"order/pkg/db"
 	"order/pkg/logger"
 )
@@ -17,17 +17,19 @@ type Container struct {
 }
 
 type Module struct {
-	Name    string
-	Model   interface{}
-	Handler func(*http.ServeMux, *db.DB)
+	Name  string
+	Model interface{}
+	Setup func(*http.ServeMux, *db.DB, logger.Logger)
 }
 
-func getApplicationModules() []Module {
+func getDomainModules() []Module {
 	return []Module{
 		{
-			Name:    "Product",
-			Model:   &product.Product{},
-			Handler: func(mux *http.ServeMux, db *db.DB) {},
+			Name:  "Product",
+			Model: &product.Product{},
+			Setup: func(mux *http.ServeMux, database *db.DB, appLogger logger.Logger) {
+				productRepository := product.NewRepository(database)
+			},
 		},
 	}
 }
@@ -55,6 +57,10 @@ func New(configs *config.Config) (*Container, error) {
 		Configs: configs,
 		DB:      database,
 	}, nil
+}
+
+func (c *Container) Start() error {
+
 }
 
 func (c *Container) Close() error {

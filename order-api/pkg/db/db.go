@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 	"order/internal/config"
-	"order/internal/db_models/product"
+	"order/internal/domain/product"
 	pkgLogger "order/pkg/logger"
 	"time"
 )

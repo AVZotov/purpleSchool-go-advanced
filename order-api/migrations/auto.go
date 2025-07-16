@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"order/internal/config"
-	"order/internal/db_models/product"
+	"order/internal/domain/product"
 	"os"
 )
 
