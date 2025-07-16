@@ -2,7 +2,7 @@ package system
 
 import (
 	"net/http"
-	"order/internal/http_server/handlers/base"
+	"order/internal/http/handlers/base"
 	"time"
 )
 

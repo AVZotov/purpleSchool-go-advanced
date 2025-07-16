@@ -2,7 +2,9 @@ package container
 
 import (
 	"fmt"
+	"net/http"
 	"order/internal/config"
+	"order/internal/db_models/product"
 	"order/pkg/db"
 	"order/pkg/logger"
 )
@@ -11,6 +13,23 @@ type Container struct {
 	Logger  logger.Logger
 	Configs *config.Config
 	DB      *db.DB
+	Mux     *http.ServeMux
+}
+
+type Module struct {
+	Name    string
+	Model   interface{}
+	Handler func(*http.ServeMux, *db.DB)
+}
+
+func getApplicationModules() []Module {
+	return []Module{
+		{
+			Name:    "Product",
+			Model:   &product.Product{},
+			Handler: func(mux *http.ServeMux, db *db.DB) {},
+		},
+	}
 }
 
 func New(configs *config.Config) (*Container, error) {

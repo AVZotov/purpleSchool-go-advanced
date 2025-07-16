@@ -74,7 +74,7 @@ func (d Database) PsqlDSN() string {
 type Config struct {
 	Env         Environment `yaml:"env" env:"APP_ENV" env-required:"true"`
 	MailService MailService `yaml:"mail_service"`
-	HttpServer  HttpServer  `yaml:"http_server"`
+	HttpServer  HttpServer  `yaml:"http"`
 	//Database    Database    `yaml:"database"`
 }
 

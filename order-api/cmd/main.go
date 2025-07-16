@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"order/internal/config"
-	"order/internal/http_server/router"
-	"order/internal/http_server/server"
+	"order/internal/http/router"
+	"order/internal/http/server"
 	"order/pkg/container"
 	"order/pkg/db"
 	"os"

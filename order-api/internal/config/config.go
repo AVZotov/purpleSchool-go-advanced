@@ -60,7 +60,7 @@ type HttpServer struct {
 type Config struct {
 	Env        Environment `yaml:"env" env:"APP_ENV" env-required:"true"`
 	Database   Database    `yaml:"data_base" env:"APP_DATABASE" env-required:"true"`
-	HttpServer HttpServer  `yaml:"http_server" env:"HTTP_SERVER" env-required:"true"`
+	HttpServer HttpServer  `yaml:"http" env:"HTTP_SERVER" env-required:"true"`
 }
 
 func MustLoadConfig(configPath string) (*Config, error) {

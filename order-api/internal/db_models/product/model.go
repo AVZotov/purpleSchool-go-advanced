@@ -29,6 +29,9 @@ func (p *Product) Validate() error {
 	}
 
 	for _, imageURL := range p.Images {
+		if imageURL == "" {
+			continue
+		}
 		if _, err := url.Parse(imageURL); err != nil {
 			return err
 		}
