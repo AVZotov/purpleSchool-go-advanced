@@ -20,15 +20,15 @@ func NewWrapper(logger *slog.Logger) Logger {
 }
 
 func (w *SmartWrapper) Debug(msg string, args ...any) {
-	context := w.getContext()
-	allArgs := append([]any{"context", context}, args...)
-	w.logger.Debug(msg, allArgs...)
+	//context := w.getContext()
+	//allArgs := append([]any{"context", context}, args...)
+	w.logger.Debug(msg, args...)
 }
 
 func (w *SmartWrapper) Info(msg string, args ...any) {
-	context := w.getContext()
-	allArgs := append([]any{"context", context}, args...)
-	w.logger.Info(msg, allArgs...)
+	//context := w.getContext()
+	//allArgs := append([]any{"context", context}, args...)
+	w.logger.Info(msg, args...)
 }
 
 func (w *SmartWrapper) Warn(msg string, args ...any) {

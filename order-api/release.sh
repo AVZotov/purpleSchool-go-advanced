@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Скрипт для создания релизов субпроекта order-api
-# Запускается из purple_school/order-api/
+# Глобальные переменные
+PROJECT_NAME="order-api"
+
+# Скрипт для создания релизов субпроекта $PROJECT_NAME
+# Запускается из purple_school/$PROJECT_NAME/
 
 if [ $# -eq 0 ]; then
     echo "Usage: ./release.sh <version>"
@@ -18,8 +21,7 @@ if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 # Находим корень Git репозитория
-GIT_ROOT=$(git rev-parse --show-toplevel)
-if [ $? -ne 0 ]; then
+if ! GIT_ROOT=$(git rev-parse --show-toplevel); then
     echo "Error: Not in a Git repository"
     exit 1
 fi
@@ -27,29 +29,31 @@ fi
 echo "Git root: $GIT_ROOT"
 echo "Current directory: $(pwd)"
 
-# Проверяем, что мы находимся в папке order-api
+# Проверяем, что мы находимся в папке проекта
 CURRENT_DIR=$(basename "$(pwd)")
-if [ "$CURRENT_DIR" != "order-api" ]; then
-    echo "Error: This script must be run from order-api directory"
+if [ "$CURRENT_DIR" != "$PROJECT_NAME" ]; then
+    echo "Error: This script must be run from $PROJECT_NAME directory"
     echo "Current directory: $(pwd)"
     exit 1
 fi
 
 # Проверяем наличие go.mod для подтверждения правильности расположения
 if [ ! -f "go.mod" ]; then
-    echo "Error: go.mod not found. Make sure you're in the order-api project root"
+    echo "Error: go.mod not found. Make sure you're in the $PROJECT_NAME project root"
     exit 1
 fi
 
 # Определяем пути относительно текущей позиции
 VERSION_FILE="version.go"
-PROJECT_PATH="order-api"
 
 # Переходим в корень Git репозитория для Git операций
-cd "$GIT_ROOT" || exit
+if ! cd "$GIT_ROOT"; then
+    echo "Error: Failed to change to Git root directory"
+    exit 1
+fi
 
 # Путь к файлу версии относительно Git root
-VERSION_FILE_PATH="$PROJECT_PATH/$VERSION_FILE"
+VERSION_FILE_PATH="$PROJECT_NAME/$VERSION_FILE"
 
 # Проверяем, что мы на ветке main
 CURRENT_BRANCH=$(git branch --show-current)
@@ -68,7 +72,11 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 # Проверяем, что main актуальный
-git fetch origin
+if ! git fetch origin; then
+    echo "Error: Failed to fetch from origin"
+    exit 1
+fi
+
 LOCAL=$(git rev-parse main)
 REMOTE=$(git rev-parse origin/main)
 if [ "$LOCAL" != "$REMOTE" ]; then
@@ -77,28 +85,38 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     exit 1
 fi
 
-echo "Creating release $VERSION for order-api project"
+echo "Creating release $VERSION for $PROJECT_NAME project"
 
-# Обновляем version.go в корне order-api
+# Обновляем version.go в корне проекта
 cat > "$VERSION_FILE_PATH" << EOF
 package main
 
 const (
 	Version   = "$VERSION"
 	BuildDate = "$(date +%Y-%m-%d)"
-	AppName   = "order-api"
+	AppName   = "$PROJECT_NAME"
 )
 EOF
 
 echo "Updated $VERSION_FILE_PATH"
 
 # Коммитим изменения
-git add "$VERSION_FILE_PATH"
-git commit -m "order-api: bump version to $VERSION"
+if ! git add "$VERSION_FILE_PATH"; then
+    echo "Error: Failed to add $VERSION_FILE_PATH to git"
+    exit 1
+fi
+
+if ! git commit -m "$PROJECT_NAME: bump version to $VERSION"; then
+    echo "Error: Failed to commit changes"
+    exit 1
+fi
 
 # Создаем тег с префиксом проекта
-TAG_NAME="order-api/v$VERSION"
-git tag "$TAG_NAME"
+TAG_NAME="$PROJECT_NAME/v$VERSION"
+if ! git tag "$TAG_NAME"; then
+    echo "Error: Failed to create tag $TAG_NAME"
+    exit 1
+fi
 
 echo "Created tag $TAG_NAME"
 echo ""
@@ -106,8 +124,8 @@ echo "To push changes:"
 echo "  git push origin main"
 echo "  git push origin $TAG_NAME"
 echo ""
-echo "To build order-api:"
-echo "  cd $PROJECT_PATH"
-echo "  go build -o bin/order-api ./cmd/main.go"
+echo "To build $PROJECT_NAME:"
+echo "  cd $PROJECT_NAME"
+echo "  go build -o bin/$PROJECT_NAME ./cmd/main.go"
 echo ""
 echo "Release $VERSION created successfully!"

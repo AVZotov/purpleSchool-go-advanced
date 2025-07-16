@@ -55,13 +55,17 @@ func (db *DB) Create(v any) error {
 	return db.DB.Create(v).Error
 }
 
+func (db *DB) Delete(id uint) error {
+	return db.DB.Delete(id).Error
+}
+
 func getGormLogLevel(env string) gormLogger.LogLevel {
 	switch env {
 	case "dev":
-		return gormLogger.Info
+		return gormLogger.Warn
 	case "prod":
 		return gormLogger.Error
 	default:
-		return gormLogger.Warn
+		return gormLogger.Info
 	}
 }

@@ -2,10 +2,12 @@ package product
 
 import (
 	"order/pkg/db"
+	"strconv"
 )
 
 type ProdRepository interface {
-	Create(product *Product) error
+	Create(*Product) error
+	Delete(string) error
 }
 
 type Repository struct {
@@ -21,4 +23,16 @@ func (r *Repository) Create(p *Product) error {
 		return err
 	}
 	return r.db.Create(p)
+}
+
+func (r *Repository) Delete(idStr string) error {
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		return err
+	}
+	err = r.db.Delete(uint(id))
+	if err != nil {
+		return err
+	}
+	return nil
 }

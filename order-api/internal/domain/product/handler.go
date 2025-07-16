@@ -1,10 +1,12 @@
 package product
 
 import (
+	"fmt"
 	"net/http"
 	"order/internal/http/handlers/base"
 	pkgErrors "order/pkg/errors"
 	pkgLogger "order/pkg/logger"
+	"path"
 )
 
 const DomainProductRoot = "/api/v1/products"
@@ -22,7 +24,10 @@ func NewHandler(repo ProdRepository, logger pkgLogger.Logger) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST "+DomainProductRoot, h.create)
+	mux.HandleFunc(fmt.Sprintf(
+		"%s %s", http.MethodPost, DomainProductRoot), h.create)
+	mux.HandleFunc(fmt.Sprintf(
+		"%s %s", http.MethodDelete, path.Join(DomainProductRoot, "{id}")), h.Delete)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -45,5 +50,19 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	h.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":      product.ID,
 		"message": "Product created successfully",
+	})
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	strId := r.PathValue("id")
+	if err := h.repository.Delete(strId); err != nil {
+		h.Logger.Error("Failed to delete product", "error", err)
+		h.WriteError(w, pkgErrors.NewInvalidIdError(err.Error()))
+		return
+	}
+	h.Logger.Info("Product deleted successfully", "id", strId)
+	h.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"id":      strId,
+		"message": "Product deleted successfully",
 	})
 }
