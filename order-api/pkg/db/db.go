@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 	"order/internal/config"
-	"order/internal/domain/product"
 	pkgLogger "order/pkg/logger"
 	"time"
 )
@@ -52,8 +51,8 @@ func New(config *config.Config, appLogger pkgLogger.Logger) (*DB, error) {
 	return dbStruct, nil
 }
 
-func (db *DB) CreateWithLogging(product *product.Product) error {
-	return db.DB.Create(product).Error
+func (db *DB) Create(v any) error {
+	return db.DB.Create(v).Error
 }
 
 func getGormLogLevel(env string) gormLogger.LogLevel {

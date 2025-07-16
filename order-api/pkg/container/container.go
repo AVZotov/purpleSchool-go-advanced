@@ -5,21 +5,25 @@ import (
 	"net/http"
 	"order/internal/config"
 	"order/internal/domain/product"
+	"order/internal/http/handlers/system"
+	"order/internal/http/server"
 	"order/pkg/db"
-	"order/pkg/logger"
+	pkgLogger "order/pkg/logger"
+	"order/pkg/migrations"
 )
 
 type Container struct {
-	Logger  logger.Logger
+	Logger  pkgLogger.Logger
 	Configs *config.Config
 	DB      *db.DB
 	Mux     *http.ServeMux
+	Server  *server.Server
 }
 
 type Module struct {
 	Name  string
-	Model interface{}
-	Setup func(*http.ServeMux, *db.DB, logger.Logger)
+	Model any
+	Setup func(*http.ServeMux, *db.DB, pkgLogger.Logger)
 }
 
 func getDomainModules() []Module {
@@ -27,16 +31,18 @@ func getDomainModules() []Module {
 		{
 			Name:  "Product",
 			Model: &product.Product{},
-			Setup: func(mux *http.ServeMux, database *db.DB, appLogger logger.Logger) {
-				productRepository := product.NewRepository(database)
+			Setup: func(mux *http.ServeMux, database *db.DB, appLogger pkgLogger.Logger) {
+				repository := product.NewRepository(database)
+				handler := product.NewHandler(repository, appLogger)
+				handler.RegisterRoutes(mux)
 			},
 		},
 	}
 }
 
 func New(configs *config.Config) (*Container, error) {
-	slg := logger.NewLogger(configs.Env.String())
-	appLogger := logger.NewWrapper(slg)
+	slg := pkgLogger.NewLogger(configs.Env.String())
+	appLogger := pkgLogger.NewWrapper(slg)
 	appLogger.Debug("Logger initialized")
 
 	database, err := db.New(configs, appLogger)
@@ -44,7 +50,7 @@ func New(configs *config.Config) (*Container, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	if err = database.RunMigrations(appLogger); err != nil {
+	if err = migrations.RunMigrations(database.DB, appLogger, getModels()); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -52,15 +58,43 @@ func New(configs *config.Config) (*Container, error) {
 		appLogger.Warn("Failed to setup connection pool", "error", err)
 	}
 
+	mux := http.NewServeMux()
+
+	registerRoutes(mux, database, appLogger)
+
+	srv := server.New(configs.HttpServer.Port, mux)
+
 	return &Container{
 		Logger:  appLogger,
 		Configs: configs,
 		DB:      database,
+		Mux:     mux,
+		Server:  srv,
 	}, nil
 }
 
-func (c *Container) Start() error {
+func registerRoutes(mux *http.ServeMux, database *db.DB, appLogger pkgLogger.Logger) {
+	system.New(mux)
+	modules := getDomainModules()
+	for _, module := range modules {
+		appLogger.Debug("Registering module", "name", module.Name)
+		module.Setup(mux, database, appLogger)
+	}
+}
 
+func getModels() []any {
+	modules := getDomainModules()
+	var models []any
+
+	for _, module := range modules {
+		models = append(models, module.Model)
+	}
+	return models
+}
+
+func (c *Container) Start() error {
+	c.Logger.Info("Starting HTTP server", "port", c.Configs.HttpServer.Port)
+	return c.Server.ListenAndServe()
 }
 
 func (c *Container) Close() error {

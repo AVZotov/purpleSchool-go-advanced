@@ -3,16 +3,13 @@ package migrations
 import (
 	"fmt"
 	"gorm.io/gorm"
-	"order/internal/domain/product"
 	pkgLogger "order/pkg/logger"
 )
 
-func RunMigrations(db *gorm.DB, appLogger pkgLogger.Logger) error {
-	appLogger.Info("Starting database migrations...")
+func RunMigrations(db *gorm.DB, appLogger pkgLogger.Logger, modules ...any) error {
+	appLogger.Debug("starting database migrations")
 
-	err := db.AutoMigrate(
-		&product.Product{},
-	)
+	err := db.AutoMigrate(modules...)
 	if err != nil {
 		appLogger.Error("Failed to run migrations", "error", err)
 		return fmt.Errorf("failed to run migrations: %w", err)

@@ -20,5 +20,5 @@ func (r *Repository) Create(p *Product) error {
 	if err := p.ValidateImageURLs(); err != nil {
 		return err
 	}
-	return r.db.CreateWithLogging(p)
+	return r.db.Create(p)
 }

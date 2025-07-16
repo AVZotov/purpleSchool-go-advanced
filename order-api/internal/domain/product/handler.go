@@ -1,7 +1,6 @@
 package product
 
 import (
-	"fmt"
 	"net/http"
 	"order/internal/http/handlers/base"
 	pkgErrors "order/pkg/errors"
@@ -12,10 +11,10 @@ const DomainProductRoot = "/api/V1/product"
 
 type Handler struct {
 	base.Handler
-	repository *Repository
+	repository ProdRepository
 }
 
-func NewHandler(repo *Repository, logger pkgLogger.Logger) *Handler {
+func NewHandler(repo ProdRepository, logger pkgLogger.Logger) *Handler {
 	return &Handler{
 		Handler:    base.Handler{Logger: logger},
 		repository: repo,
@@ -23,7 +22,7 @@ func NewHandler(repo *Repository, logger pkgLogger.Logger) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc(fmt.Sprintf("%s %s", http.MethodPost, DomainProductRoot), h.create)
+	mux.HandleFunc("POST "+DomainProductRoot, h.create)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {

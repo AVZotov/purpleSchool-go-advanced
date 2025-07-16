@@ -3,11 +3,10 @@ package main
 import (
 	"log"
 	"order/internal/config"
-	"order/internal/http/router"
-	"order/internal/http/server"
 	"order/pkg/container"
-	"order/pkg/db"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const DevFile = "configs.yml"
@@ -30,4 +29,21 @@ func main() {
 		log.Fatalf("Failed to create container: %v", err)
 	}
 
+	go func() {
+		sygChan := make(chan os.Signal, 1)
+		signal.Notify(sygChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sygChan
+
+		if err = ctr.Close(); err != nil {
+			ctr.Logger.Error("Error during shutdown", "error", err)
+		}
+		os.Exit(0)
+	}()
+
+	ctr.Logger.Info("Starting server")
+	err = ctr.Start()
+	if err != nil {
+		ctr.Logger.Error("Failed to start server", "error", err)
+		os.Exit(1)
+	}
 }
