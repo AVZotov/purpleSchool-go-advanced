@@ -48,16 +48,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Logger.Info("Product created successfully", "id", product.ID)
-	h.WriteJSON(w, http.StatusCreated, map[string]interface{}{
-		"id":      product.ID,
-		"message": "Product created successfully",
-	})
+	h.Logger.Info("Product created successfully")
+	response := product.ToResponse()
+	h.WriteJSON(w, http.StatusCreated, response)
 }
 
 func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	if err := h.repository.GetByID(idStr); err != nil {
+	product, err := h.repository.GetByID(idStr)
+	if err != nil {
 		if appError, ok := pkgErrors.AsAppError(err); ok {
 			switch appError.Code {
 			case pkgErrors.ErrNotFound.Code:
@@ -69,11 +68,15 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
 				return
 			}
+		} else {
+			h.Logger.Error("Failed to get product", "error", err)
+			h.WriteError(w, err)
+			return
 		}
-		h.Logger.Error("Failed to get product", "error", err)
-		h.WriteError(w, err)
-		return
 	}
+	response := product.ToDetailResponse()
+	h.Logger.Info("Product found successfully")
+	h.WriteJSON(w, http.StatusOK, response)
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
