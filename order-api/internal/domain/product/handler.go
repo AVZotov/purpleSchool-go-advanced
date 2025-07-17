@@ -28,6 +28,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 		"%s %s", http.MethodPost, DomainProductRoot), h.create)
 	mux.HandleFunc(fmt.Sprintf(
 		"%s %s", http.MethodDelete, path.Join(DomainProductRoot, "{id}")), h.Delete)
+	mux.HandleFunc(fmt.Sprintf(
+		"%s %s", http.MethodGet, path.Join(DomainProductRoot, "{id}")), h.GetById)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +53,27 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		"id":      product.ID,
 		"message": "Product created successfully",
 	})
+}
+
+func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if err := h.repository.GetByID(idStr); err != nil {
+		if appError, ok := pkgErrors.AsAppError(err); ok {
+			switch appError.Code {
+			case pkgErrors.ErrNotFound.Code:
+				h.Logger.Warn("Product not found", "id", idStr)
+				h.WriteError(w, pkgErrors.NewNotFoundError(idStr))
+				return
+			case pkgErrors.ErrInvalidId.Code:
+				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
+				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
+				return
+			}
+		}
+		h.Logger.Error("Failed to get product", "error", err)
+		h.WriteError(w, err)
+		return
+	}
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {

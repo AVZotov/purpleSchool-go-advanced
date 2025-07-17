@@ -2,6 +2,7 @@ package product
 
 import (
 	"errors"
+	"log"
 	"order/pkg/db"
 	pkgErrors "order/pkg/errors"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 type ProdRepository interface {
 	Create(*Product) error
 	Delete(string) error
+	GetByID(string) error
 }
 
 type Repository struct {
@@ -27,18 +29,37 @@ func (r *Repository) Create(p *Product) error {
 	return r.db.Create(p)
 }
 
+func (r *Repository) GetByID(idStr string) error {
+	id, err := r.parseID(idStr)
+	if err != nil {
+		return pkgErrors.NewInvalidIdError(err.Error())
+	}
+
+	var product Product
+	rowsAffected, err := r.db.GetById(product, id)
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return pkgErrors.NewNotFoundError("Product not found")
+	}
+	log.Println(rowsAffected)
+	log.Println(product)
+	return nil
+}
+
 func (r *Repository) Delete(idStr string) error {
 	id, err := r.parseID(idStr)
 	if err != nil {
 		return pkgErrors.NewInvalidIdError(err.Error())
 	}
 
-	result := r.db.DB.Delete(&Product{}, id)
-	if result.Error != nil {
-		return result.Error
+	rowsAffected, err := r.db.Delete(&Product{}, id)
+	if err != nil {
+		return err
 	}
 
-	if result.RowsAffected == 0 {
+	if rowsAffected == 0 {
 		return pkgErrors.NewNotFoundError("Product not found")
 	}
 	return nil
