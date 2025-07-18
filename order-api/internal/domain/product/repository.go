@@ -2,6 +2,7 @@ package product
 
 import (
 	"errors"
+	"github.com/lib/pq"
 	"order/pkg/db"
 	pkgErrors "order/pkg/errors"
 	"strconv"
@@ -11,6 +12,9 @@ type ProdRepository interface {
 	Create(*Product) error
 	Delete(string) error
 	GetByID(string) (*Product, error)
+	GetAll() ([]*Product, error)
+	UpdatePartial(string, map[string]interface{}) error
+	UpdateAll(*Product) error
 }
 
 type Repository struct {
@@ -35,7 +39,7 @@ func (r *Repository) GetByID(idStr string) (*Product, error) {
 	}
 
 	var product Product
-	rowsAffected, err := r.db.GetById(&product, id)
+	rowsAffected, err := r.db.FindById(&product, id)
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +47,49 @@ func (r *Repository) GetByID(idStr string) (*Product, error) {
 		return nil, pkgErrors.NewNotFoundError("Product not found")
 	}
 	return &product, nil
+}
+
+func (r *Repository) GetAll() ([]*Product, error) {
+	var products []*Product
+	if err := r.db.FindAll(&products); err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
+func (r *Repository) UpdatePartial(idStr string, fields map[string]interface{}) error {
+	id, err := r.parseID(idStr)
+	if err != nil {
+		return pkgErrors.NewInvalidIdError(err.Error())
+	}
+
+	if images, ok := fields["images"]; ok {
+		if imageArray, ok := images.(pq.StringArray); ok {
+			tempProduct := &Product{Images: imageArray}
+			if err = tempProduct.ValidateImageURLs(); err != nil {
+				return err
+			}
+		}
+	}
+
+	rowsAffected, err := r.db.UpdatePartial(&Product{}, id, fields)
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return pkgErrors.NewNotFoundError("Product not found")
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateAll(product *Product) error {
+	if err := product.ValidateImageURLs(); err != nil {
+		return err
+	}
+
+	return r.db.UpdateAll(product)
 }
 
 func (r *Repository) Delete(idStr string) error {

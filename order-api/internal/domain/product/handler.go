@@ -6,10 +6,11 @@ import (
 	"order/internal/http/handlers/base"
 	pkgErrors "order/pkg/errors"
 	pkgLogger "order/pkg/logger"
-	"path"
 )
 
-const DomainProductRoot = "/api/v1/products"
+const (
+	DomainProductRoot = "/api/v1/products"
+)
 
 type Handler struct {
 	base.Handler
@@ -24,12 +25,12 @@ func NewHandler(repo ProdRepository, logger pkgLogger.Logger) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc(fmt.Sprintf(
-		"%s %s", http.MethodPost, DomainProductRoot), h.create)
-	mux.HandleFunc(fmt.Sprintf(
-		"%s %s", http.MethodDelete, path.Join(DomainProductRoot, "{id}")), h.Delete)
-	mux.HandleFunc(fmt.Sprintf(
-		"%s %s", http.MethodGet, path.Join(DomainProductRoot, "{id}")), h.GetById)
+	mux.HandleFunc(fmt.Sprintf("POST %s", DomainProductRoot), h.create)
+	mux.HandleFunc(fmt.Sprintf("DELETE %s/{id}", DomainProductRoot), h.delete)
+	mux.HandleFunc(fmt.Sprintf("GET %s/{id}", DomainProductRoot), h.getById)
+	mux.HandleFunc(fmt.Sprintf("GET %s", DomainProductRoot), h.getAll)
+	mux.HandleFunc(fmt.Sprintf("PUT %s/{id}", DomainProductRoot), h.updateAll)
+	mux.HandleFunc(fmt.Sprintf("PATCH %s/{id}", DomainProductRoot), h.updatePartial)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +54,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	h.WriteJSON(w, http.StatusCreated, response)
 }
 
-func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	product, err := h.repository.GetByID(idStr)
 	if err != nil {
@@ -61,7 +62,7 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 			switch appError.Code {
 			case pkgErrors.ErrNotFound.Code:
 				h.Logger.Warn("Product not found", "id", idStr)
-				h.WriteError(w, pkgErrors.NewNotFoundError(idStr))
+				h.WriteError(w, pkgErrors.NewNotFoundError("product not found"))
 				return
 			case pkgErrors.ErrInvalidId.Code:
 				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
@@ -79,7 +80,101 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	h.WriteJSON(w, http.StatusOK, response)
 }
 
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getAll(w http.ResponseWriter, _ *http.Request) {
+	products, err := h.repository.GetAll()
+	if err != nil {
+		h.Logger.Error("Failed to get products", "error", err)
+		h.WriteError(w, err)
+		return
+	}
+
+	response := ToListResponseArray(products)
+	h.Logger.Info("Products retrieved successfully", "count", len(products))
+	h.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) updateAll(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	searchedProduct := h.isExists(w, idStr)
+	if searchedProduct == nil {
+		return
+	}
+	id := searchedProduct.ID
+
+	var replaceReq ReplaceRequest
+	if err := h.ParseJSON(r, &replaceReq); err != nil {
+		h.Logger.Error("Failed to parse JSON", "error", err)
+		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("invalid JSON format"))
+		return
+	}
+
+	if err := replaceReq.Validate(); err != nil {
+		h.Logger.Error("Validation failed", "error", err)
+		h.WriteError(w, pkgErrors.NewJsonUnmarshalError(err.Error()))
+		return
+	}
+
+	product := replaceReq.ToProduct(id)
+	if err := h.repository.UpdateAll(product); err != nil {
+		h.Logger.Error("Failed to replace product", "error", err)
+		h.WriteError(w, err)
+		return
+	}
+
+	response := product.ToDetailResponse()
+	h.Logger.Info("Product replaced successfully", "id", idStr)
+	h.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) updatePartial(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	var updateReq UpdateRequest
+	if err := h.ParseJSON(r, &updateReq); err != nil {
+		h.Logger.Error("Failed to parse JSON", "error", err)
+		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("invalid JSON format"))
+		return
+	}
+
+	if !updateReq.HasFields() {
+		h.Logger.Error("No fields provided for update")
+		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("at least one field must be provided"))
+		return
+	}
+
+	fields := updateReq.ToFieldsMap()
+	if err := h.repository.UpdatePartial(idStr, fields); err != nil {
+		if appError, ok := pkgErrors.AsAppError(err); ok {
+			switch appError.Code {
+			case pkgErrors.ErrNotFound.Code:
+				h.Logger.Warn("Product not found for partial update", "id", idStr)
+				h.WriteError(w, pkgErrors.NewNotFoundError(idStr))
+				return
+			case pkgErrors.ErrInvalidId.Code:
+				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
+				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
+				return
+			}
+		}
+		h.Logger.Error("Failed to update product", "error", err)
+		h.WriteError(w, err)
+		return
+	}
+
+	updatedProduct, err := h.repository.GetByID(idStr)
+	if err != nil {
+		h.Logger.Error("Failed to get updated product", "error", err)
+		h.WriteError(w, err)
+		return
+	}
+
+	response := updatedProduct.ToDetailResponse()
+	h.Logger.Info("Product updated successfully", "id", idStr)
+	h.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	if err := h.repository.Delete(idStr); err != nil {
 		if appError, ok := pkgErrors.AsAppError(err); ok {
@@ -104,4 +199,27 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		"id":      idStr,
 		"message": "Product deleted successfully",
 	})
+}
+
+func (h *Handler) isExists(w http.ResponseWriter, idStr string) *Product {
+	searchedProduct, err := h.repository.GetByID(idStr)
+	if err != nil {
+		if appError, ok := pkgErrors.AsAppError(err); ok {
+			switch appError.Code {
+			case pkgErrors.ErrNotFound.Code:
+				h.Logger.Warn("Product not found for replacement")
+				h.WriteError(w, pkgErrors.NewNotFoundError("product not found"))
+				return nil
+			case pkgErrors.ErrInvalidId.Code:
+				h.Logger.Error("Invalid product ID format", "error", err)
+				h.WriteError(w, pkgErrors.NewInvalidIdError(""))
+				return nil
+			}
+		}
+		h.Logger.Error("Failed to get product for replacement", "error", err)
+		h.WriteError(w, err)
+		return nil
+	}
+
+	return searchedProduct
 }

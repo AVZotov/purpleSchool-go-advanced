@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -55,9 +56,27 @@ func (db *DB) Create(v any) error {
 	return db.DB.Create(v).Error
 }
 
-func (db *DB) GetById(model any, id uint) (int64, error) {
-	result := db.DB.First(&model, id)
+func (db *DB) FindById(model any, id uint) (int64, error) {
+	result := db.DB.First(model, id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return 0, nil
+		}
+	}
 	return result.RowsAffected, result.Error
+}
+
+func (db *DB) FindAll(models any) error {
+	return db.DB.Find(models).Error
+}
+
+func (db *DB) UpdatePartial(model any, id uint, fields map[string]any) (int64, error) {
+	result := db.DB.Model(model).Where("id = ?", id).Updates(fields)
+	return result.RowsAffected, result.Error
+}
+
+func (db *DB) UpdateAll(model any) error {
+	return db.DB.Save(model).Error
 }
 
 func (db *DB) Delete(module any, conditions ...any) (int64, error) {

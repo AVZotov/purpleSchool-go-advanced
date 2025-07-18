@@ -46,6 +46,43 @@ func (p *Product) ValidateImageURLs() error {
 	return nil
 }
 
+func (r *ReplaceRequest) Validate() error {
+	v := validator.New()
+	if err := v.Validate(r); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *ReplaceRequest) ToProduct(id uint) *Product {
+	return &Product{
+		Model:       gorm.Model{ID: id},
+		Name:        r.Name,
+		Description: r.Description,
+		Images:      r.Images,
+	}
+}
+
+func (u *UpdateRequest) ToFieldsMap() map[string]interface{} {
+	fields := make(map[string]interface{})
+
+	if u.Name != nil {
+		fields["name"] = *u.Name
+	}
+	if u.Description != nil {
+		fields["description"] = *u.Description
+	}
+	if u.Images != nil {
+		fields["images"] = *u.Images
+	}
+
+	return fields
+}
+
+func (u *UpdateRequest) HasFields() bool {
+	return u.Name != nil || u.Description != nil || u.Images != nil
+}
+
 func (p *Product) BeforeCreate(_ *gorm.DB) error {
 	return p.Validate()
 }
