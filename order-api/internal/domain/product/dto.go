@@ -33,7 +33,8 @@ type ReplaceRequest struct {
 
 func (p *Product) ToResponse() *ToResponse {
 	return &ToResponse{
-		Name: p.Name,
+		Name:        p.Name,
+		Description: p.Description,
 	}
 }
 
