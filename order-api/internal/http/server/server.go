@@ -1,16 +1,19 @@
 package server
 
-import "net/http"
+import (
+	"net/http"
+	"order/pkg/middleware"
+)
 
 type Server struct {
 	Port    string
-	Handler *http.ServeMux
+	Handler http.Handler
 }
 
 func New(port string, router *http.ServeMux) *Server {
 	return &Server{
 		Port:    ":" + port,
-		Handler: router,
+		Handler: middleware.Logger(router),
 	}
 }
 
