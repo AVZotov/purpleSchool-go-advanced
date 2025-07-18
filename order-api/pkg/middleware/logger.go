@@ -1,35 +1,54 @@
 package middleware
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"net/http"
-	"os"
 	"time"
 )
+
+var logger *logrus.Logger
+
+func init() {
+	logger = logrus.New()
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: time.RFC3339,
+	})
+	logger.SetLevel(logrus.InfoLevel)
+}
 
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		logger := log.New()
-		logger.SetFormatter(&log.JSONFormatter{})
-		logger.SetOutput(os.Stdout)
-		logger.WithFields(log.Fields{
-			"time":       time.Now().Format("2006-01-02 15:04:05"),
-			"status":     "",
-			"method":     r.Method,
-			"host":       r.Host,
-			"url":        r.URL.String(),
-			"referer":    r.Referer(),
-			"user_agent": r.UserAgent(),
-			"latency":    time.Since(start),
-		})
+		logger.WithFields(logrus.Fields{
+			"method":         r.Method,
+			"url":            r.URL.String(),
+			"remote_addr":    r.RemoteAddr,
+			"user_agent":     r.UserAgent(),
+			"referer":        r.Referer(),
+			"host":           r.Host,
+			"proto":          r.Proto,
+			"content_length": r.ContentLength,
+		}).Info("Incoming request")
 
-		logger.Info("Message")
 		wrapper := &WrapperWriter{
 			ResponseWriter: w,
 			StatusCode:     http.StatusOK,
 		}
+
 		next.ServeHTTP(wrapper, r)
-		logger.WithFields(log.Fields{})
+
+		duration := time.Since(start)
+
+		logger.WithFields(logrus.Fields{
+			"method":         r.Method,
+			"url":            r.URL.String(),
+			"status":         wrapper.StatusCode,
+			"status_text":    http.StatusText(wrapper.StatusCode),
+			"duration_ms":    duration.Milliseconds(),
+			"remote_addr":    r.RemoteAddr,
+			"user_agent":     r.UserAgent(),
+			"content_length": r.ContentLength,
+		}).Info("Incoming response")
 	})
+
 }
