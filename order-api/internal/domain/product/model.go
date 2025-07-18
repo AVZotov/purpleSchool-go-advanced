@@ -86,7 +86,3 @@ func (u *UpdateRequest) HasFields() bool {
 func (p *Product) BeforeCreate(_ *gorm.DB) error {
 	return p.Validate()
 }
-
-func (p *Product) BeforeUpdate(_ *gorm.DB) error {
-	return p.Validate()
-}

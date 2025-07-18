@@ -6,6 +6,7 @@ import (
 	"order/pkg/db"
 	pkgErrors "order/pkg/errors"
 	"strconv"
+	"strings"
 )
 
 type ProdRepository interface {
@@ -29,6 +30,7 @@ func (r *Repository) Create(p *Product) error {
 	if err := p.ValidateImageURLs(); err != nil {
 		return err
 	}
+
 	return r.db.Create(p)
 }
 
@@ -72,6 +74,18 @@ func (r *Repository) UpdatePartial(idStr string, fields map[string]interface{}) 
 		}
 	}
 
+	if name, ok := fields["name"]; ok {
+		if nameStr, ok := name.(string); ok && strings.TrimSpace(nameStr) == "" {
+			return pkgErrors.NewJsonUnmarshalError("name cannot be empty")
+		}
+	}
+
+	if description, ok := fields["description"]; ok {
+		if descStr, ok := description.(string); ok && strings.TrimSpace(descStr) == "" {
+			return pkgErrors.NewJsonUnmarshalError("description cannot be empty")
+		}
+	}
+
 	rowsAffected, err := r.db.UpdatePartial(&Product{}, id, fields)
 	if err != nil {
 		return err
@@ -85,6 +99,10 @@ func (r *Repository) UpdatePartial(idStr string, fields map[string]interface{}) 
 }
 
 func (r *Repository) UpdateAll(product *Product) error {
+	if err := product.Validate(); err != nil {
+		return err
+	}
+
 	if err := product.ValidateImageURLs(); err != nil {
 		return err
 	}
