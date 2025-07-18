@@ -11,7 +11,6 @@ import (
 type Environment string
 
 const (
-	EnvLoc  = "loc"
 	EnvDev  = "dev"
 	EnvProd = "prod"
 	EnvTest = "test"
@@ -19,10 +18,6 @@ const (
 
 func (e Environment) String() string {
 	return string(e)
-}
-
-func (e Environment) IsLoc() bool {
-	return e == EnvLoc
 }
 
 func (e Environment) IsDev() bool {
@@ -37,14 +32,20 @@ func (e Environment) IsTest() bool {
 	return e == EnvTest
 }
 
-type MailService struct {
-	Name     string `yaml:"name" env:"MAIL_NAME" env-required:"true"`
-	Email    string `yaml:"email" env:"MAIL_EMAIL" env-required:"true"`
-	Password string `yaml:"password" env:"MAIL_PASSWORD"`
-	Schema   string `yaml:"schema" env:"MAIL_SCHEMA" env-required:"true"`
-	Host     string `yaml:"host" env:"MAIL_HOST" env-required:"true"`
-	Port     string `yaml:"port" env:"MAIL_PORT"`
-	Address  string `yaml:"address" env:"MAIL_ADDRESS"`
+type Database struct {
+	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
+	Port     string `yaml:"port" env:"DB_PORT" env-default:"5432"`
+	User     string `yaml:"user" env:"DB_USER" env-required:"true"`
+	Password string `yaml:"password" env:"DB_PASSWORD" env-required:"true"`
+	Name     string `yaml:"name" env:"DB_NAME" env-required:"true"`
+	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"require"`
+	DbVolume string `yaml:"db_volume" env:"DB_VOLUME" env-default:"./data"`
+}
+
+func (d Database) PsqlDSN() string {
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		d.Host, d.Port, d.User, d.Password, d.Name, d.SSLMode)
+	return dsn
 }
 
 type HttpServer struct {
@@ -56,34 +57,18 @@ type HttpServer struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 }
 
-type Database struct {
-	Host     string `yaml:"host" env:"DB_HOST" env-default:"localhost"`
-	Port     string `yaml:"port" env:"DB_PORT" env-default:"5432"`
-	User     string `yaml:"user" env:"DB_USER" env-required:"true"`
-	Password string `yaml:"password" env:"DB_PASSWORD" env-required:"true"`
-	Name     string `yaml:"name" env:"DB_NAME" env-required:"true"`
-	SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE" env-default:"disable"`
-}
-
-func (d Database) PsqlDSN() string {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		d.Host, d.Port, d.User, d.Password, d.Name, d.SSLMode)
-	return dsn
-}
-
 type Config struct {
-	Env         Environment `yaml:"env" env:"APP_ENV" env-required:"true"`
-	MailService MailService `yaml:"mail_service"`
-	HttpServer  HttpServer  `yaml:"http"`
-	//Database    Database    `yaml:"database"`
+	Env        Environment `yaml:"env" env:"APP_ENV" env-required:"true"`
+	Database   Database    `yaml:"data_base" env:"APP_DATABASE" env-required:"true"`
+	HttpServer HttpServer  `yaml:"http_server" env:"HTTP_SERVER" env-required:"true"`
 }
 
-func MustLoadConfig(configPath string) *Config {
+func MustLoadConfig(configPath string) (*Config, error) {
 	config, err := loadConfig(configPath)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		return nil, err
 	}
-	return config
+	return config, nil
 }
 
 func loadConfig(configPath string) (*Config, error) {
