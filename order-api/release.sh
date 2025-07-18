@@ -87,9 +87,20 @@ fi
 
 echo "Creating release $VERSION for $PROJECT_NAME project"
 
-# Обновляем version.go в корне проекта
+# ВАРИАНТ 1: Определяем существующий package name из файла
+if [ -f "$VERSION_FILE_PATH" ]; then
+    # Извлекаем название пакета из существующего файла
+    PACKAGE_NAME=$(grep -E "^package\s+" "$VERSION_FILE_PATH" | awk '{print $2}')
+    echo "Found existing package name: $PACKAGE_NAME"
+else
+    # Если файл не существует, используем значение по умолчанию
+    PACKAGE_NAME="version"
+    echo "File doesn't exist, using default package name: $PACKAGE_NAME"
+fi
+
+# Обновляем version.go с сохранением package name
 cat > "$VERSION_FILE_PATH" << EOF
-package main
+package $PACKAGE_NAME
 
 const (
 	Version   = "$VERSION"
@@ -98,7 +109,7 @@ const (
 )
 EOF
 
-echo "Updated $VERSION_FILE_PATH"
+echo "Updated $VERSION_FILE_PATH with package $PACKAGE_NAME"
 
 # Коммитим изменения
 if ! git add "$VERSION_FILE_PATH"; then
