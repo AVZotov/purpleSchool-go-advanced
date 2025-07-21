@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"order_simple/internal/config"
+	"order_simple/internal/domain/product"
 	"order_simple/internal/http/server"
 	"order_simple/pkg/db"
 	pkgLogger "order_simple/pkg/logger"
@@ -50,13 +50,27 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+
+	productRepo := product.NewRepository(database)
+	product.New(mux, productRepo)
+
 	stack := middleware.Chain(
 		middleware.RequestIDMiddleware,
 		middleware.LoggerMiddleware,
 	)
-	stack(mux)
 
-	server := server.New(cfg.HttpServer.Port, stack)
+	handler := stack(mux)
 
-	fmt.Println(database.DB.RowsAffected)
+	srv := server.New(cfg.HttpServer.Port, handler)
+
+	pkgLogger.Logger.WithFields(logrus.Fields{
+		"port": cfg.HttpServer.Port,
+		"host": cfg.HttpServer.Host,
+	}).Info("starting HTTP server")
+
+	if err = srv.ListenAndServe(); err != nil {
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Fatal("failed to start server")
+	}
 }
