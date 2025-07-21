@@ -11,14 +11,17 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		pkgLogger.InfoWithRequestID(r, "HTTP request start", logrus.Fields{
+		requestID := r.Header.Get(pkgLogger.RequestIDHeader)
+
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"request_id": requestID,
 			"method":     r.Method,
 			"path":       r.URL.Path,
 			"query":      r.URL.RawQuery,
 			"user_agent": r.UserAgent(),
-			"ip":         pkgLogger.GetClientIP(r),
+			"ip":         getClientIP(r),
 			"type":       pkgLogger.HttpRequestStart,
-		})
+		}).Info("HTTP request started")
 
 		wrapper := &WrapperWriter{
 			ResponseWriter: w,
@@ -27,15 +30,26 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(wrapper, r)
 
-		pkgLogger.InfoWithRequestID(r, "HTTP request completed", logrus.Fields{
+		duration := time.Since(start)
+
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"request_id":     requestID,
 			"method":         r.Method,
 			"path":           r.URL.Path,
 			"status_code":    wrapper.StatusCode,
-			"duration_ms":    time.Since(start).Milliseconds(),
+			"duration_ms":    duration.Milliseconds(),
 			"user_agent":     r.UserAgent(),
-			"ip":             pkgLogger.GetClientIP(r),
+			"ip":             getClientIP(r),
 			"type":           pkgLogger.HttpRequestEnd,
 			"content_length": r.ContentLength,
-		})
+		}).Info("HTTP request completed")
 	})
+}
+
+func getClientIP(r *http.Request) string {
+	forwarded := r.Header.Get(pkgLogger.RequestIPHeader)
+	if forwarded != "" {
+		return forwarded
+	}
+	return r.RemoteAddr
 }
