@@ -3,7 +3,6 @@ package product
 import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
-	pkgValidator "order_simple/pkg/validator"
 )
 
 type Product struct {
@@ -31,8 +30,4 @@ func (p *Product) ToFieldsMap() map[string]interface{} {
 
 func (p *Product) HasFields() bool {
 	return p.Name != "" || p.Description != "" || p.Images != nil
-}
-
-func (p *Product) BeforeCreate(_ *gorm.DB) error {
-	return pkgValidator.Validator.Validate()
 }
