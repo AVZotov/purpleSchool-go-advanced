@@ -117,6 +117,7 @@ func (rep *Repository) Delete(r *http.Request, idStr string) error {
 	if rowsAffected, err = rep.db.Delete(&Product{}, id); err != nil {
 		err = fmt.Errorf("internal db error: %w", err)
 		logRepositoryError(r, pkgLogger.DBError, "deleting product internal db error", err)
+		return err
 	}
 
 	if rowsAffected == 0 {

@@ -17,7 +17,7 @@ import (
 func main() {
 	defer func() {
 		if rec := recover(); rec != nil {
-			log.Printf("application panick recovered: %v", rec)
+			log.Printf("application panic recovered: %v", rec)
 			os.Exit(1)
 		}
 	}()

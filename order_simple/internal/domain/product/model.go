@@ -14,7 +14,7 @@ type Product struct {
 	gorm.Model
 	Name        string         `json:"name" validate:"required"`
 	Description string         `json:"description" validate:"required"`
-	Images      pq.StringArray `json:"images,omitempty" gorm:"type:text[]" validate:"http_url"`
+	Images      pq.StringArray `json:"images,omitempty" gorm:"type:text[]" validate:"dive,http_url"`
 }
 
 func (p *Product) String() string {
