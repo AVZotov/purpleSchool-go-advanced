@@ -1,12 +1,9 @@
 package product
 
 import (
-	"fmt"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
-	"net/url"
-	"order_simple/pkg/validator"
-	"strings"
+	pkgValidator "order_simple/pkg/validator"
 )
 
 type Product struct {
@@ -16,51 +13,26 @@ type Product struct {
 	Images      pq.StringArray `json:"images,omitempty" gorm:"type:text[]"`
 }
 
-func (p *Product) Validate() error {
-	v := validator.New()
-	if err := v.Validate(p); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *ReplaceRequest) Validate() error {
-	v := validator.New()
-	if err := v.Validate(r); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *ReplaceRequest) ToProduct(id uint) *Product {
-	return &Product{
-		Model:       gorm.Model{ID: id},
-		Name:        r.Name,
-		Description: r.Description,
-		Images:      r.Images,
-	}
-}
-
-func (u *UpdateRequest) ToFieldsMap() map[string]interface{} {
+func (p *Product) ToFieldsMap() map[string]interface{} {
 	fields := make(map[string]interface{})
 
-	if u.Name != nil {
-		fields["name"] = *u.Name
+	if p.Name != "" {
+		fields["name"] = p.Name
 	}
-	if u.Description != nil {
-		fields["description"] = *u.Description
+	if p.Description != "" {
+		fields["description"] = p.Description
 	}
-	if u.Images != nil {
-		fields["images"] = *u.Images
+	if p.Images != nil {
+		fields["images"] = p.Images
 	}
 
 	return fields
 }
 
-func (u *UpdateRequest) HasFields() bool {
-	return u.Name != nil || u.Description != nil || u.Images != nil
+func (p *Product) HasFields() bool {
+	return p.Name != "" || p.Description != "" || p.Images != nil
 }
 
 func (p *Product) BeforeCreate(_ *gorm.DB) error {
-	return p.Validate()
+	return pkgValidator.Validator.Validate()
 }
