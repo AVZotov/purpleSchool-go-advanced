@@ -61,6 +61,10 @@ func (db *DB) FindById(model any, id uint) (int64, error) {
 	return result.RowsAffected, nil
 }
 
+func (db *DB) FindAll(model any) error {
+	return db.DB.Find(model).Error
+}
+
 func (db *DB) UpdatePartial(model any, id uint, fields map[string]any) (int64, error) {
 	result := db.DB.Model(model).Where("id = ?", id).Updates(fields)
 	if result.Error != nil {
@@ -72,6 +76,10 @@ func (db *DB) UpdatePartial(model any, id uint, fields map[string]any) (int64, e
 	}
 
 	return result.RowsAffected, nil
+}
+
+func (db *DB) UpdateAll(model any) error {
+	return db.DB.Save(model).Error
 }
 
 func (db *DB) Delete(module any, conditions ...any) (int64, error) {

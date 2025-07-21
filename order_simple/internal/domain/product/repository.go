@@ -16,7 +16,9 @@ type ProdRepository interface {
 	Create(*http.Request, *Product) error
 	Delete(*http.Request, string) error
 	GetByID(*http.Request, string) (*Product, error)
+	GetAll(*http.Request) ([]*Product, error)
 	UpdatePartial(*http.Request, string, map[string]interface{}) error
+	UpdateAll(*http.Request, string, *Product) error
 }
 
 type Repository struct {
@@ -70,6 +72,23 @@ func (rep *Repository) GetByID(r *http.Request, idStr string) (*Product, error) 
 	return &product, nil
 }
 
+func (rep *Repository) GetAll(r *http.Request) ([]*Product, error) {
+	var products []*Product
+
+	err := rep.db.FindAll(&products)
+	if err != nil {
+		logRepositoryError(r, pkgLogger.DBError, "failed to get all products", err)
+		return nil, fmt.Errorf("failed to get all products: %w", err)
+	}
+
+	pkgLogger.InfoWithRequestID(r, "products retrieved", logrus.Fields{
+		"type":  pkgLogger.DBSuccess,
+		"count": len(products),
+	})
+
+	return products, nil
+}
+
 func (rep *Repository) UpdatePartial(r *http.Request, idStr string, fields map[string]any) error {
 	var err error
 	var id uint
@@ -100,6 +119,47 @@ func (rep *Repository) UpdatePartial(r *http.Request, idStr string, fields map[s
 
 	pkgLogger.InfoWithRequestID(r, "product updated", logrus.Fields{
 		"type": pkgLogger.DBSuccess,
+	})
+	return nil
+}
+
+func (rep *Repository) UpdateAll(r *http.Request, idStr string, product *Product) error {
+	id, err := parseID(idStr)
+	if err != nil {
+		logRepositoryError(r, pkgLogger.RepositoryError, "invalid id string", err)
+		return fmt.Errorf("invalid id string: %w", err)
+	}
+
+	if err = product.Validate(r); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	var existingProduct Product
+	rowsAffected, err := rep.db.FindById(&existingProduct, id)
+	if err != nil {
+		logRepositoryError(r, pkgLogger.DBError, "internal db error", err)
+		return fmt.Errorf("internal db error: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		pkgLogger.WarnWithRequestID(r, "product not found", logrus.Fields{
+			"type": pkgLogger.DBWarn,
+		})
+		return errors.New("not found")
+	}
+
+	product.ID = existingProduct.ID
+	product.CreatedAt = existingProduct.CreatedAt
+
+	err = rep.db.UpdateAll(&product)
+	if err != nil {
+		logRepositoryError(r, pkgLogger.DBError, "updating all fields failed", err)
+		return fmt.Errorf("updating failed: %w", err)
+	}
+
+	pkgLogger.InfoWithRequestID(r, "product updated", logrus.Fields{
+		"type":    pkgLogger.DBSuccess,
+		"product": product,
 	})
 	return nil
 }
