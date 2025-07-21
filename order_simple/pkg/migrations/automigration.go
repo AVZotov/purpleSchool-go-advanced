@@ -14,6 +14,7 @@ func RunMigrations(db *gorm.DB) error {
 	pkgLogger.Logger.WithFields(logrus.Fields{
 		"type": pkgLogger.DBMigration,
 	}).Info("starting migrations")
+
 	models := []any{
 		&product.Product{},
 	}

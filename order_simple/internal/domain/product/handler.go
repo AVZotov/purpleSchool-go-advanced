@@ -1,7 +1,9 @@
 package product
 
 import (
+	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"order_simple/internal/http/handlers/base"
 	pkgLogger "order_simple/pkg/logger"
@@ -16,209 +18,149 @@ type Handler struct {
 	repository ProdRepository
 }
 
-func NewHandler(repo ProdRepository) *Handler {
-	return &Handler{
+func New(mux *http.ServeMux, repo ProdRepository) *Handler {
+	h := &Handler{
 		Handler:    base.Handler{},
 		repository: repo,
 	}
+
+	h.registerRoutes(mux)
+
+	return h
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+func (h *Handler) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(fmt.Sprintf("POST %s", DomainProductRoot), h.create)
 	mux.HandleFunc(fmt.Sprintf("DELETE %s/{id}", DomainProductRoot), h.delete)
 	mux.HandleFunc(fmt.Sprintf("GET %s/{id}", DomainProductRoot), h.getById)
-	mux.HandleFunc(fmt.Sprintf("GET %s", DomainProductRoot), h.getAll)
-	mux.HandleFunc(fmt.Sprintf("PUT %s/{id}", DomainProductRoot), h.updateAll)
 	mux.HandleFunc(fmt.Sprintf("PATCH %s/{id}", DomainProductRoot), h.updatePartial)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	pkgLogger.InfoWithRequestID(r, "request to create product", logrus.Fields{
+		"method": r.Method,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestStart,
+	})
+
 	var product Product
 
 	err := h.ParseJSON(r, &product)
 	if err != nil {
-		h.Logger.Error("Failed to parse JSON", "error", err)
-		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("invalid JSON format"))
+		h.WriteError(w, err)
 		return
 	}
 
-	if err = h.repository.Create(&product); err != nil {
-		h.Logger.Error("Failed to create product", "error", err)
-		h.WriteError(w, pkgErrors.NewRecordNotCreatedError(err.Error()))
+	if err = h.repository.Create(r, &product); err != nil {
+		h.WriteError(w, err)
 		return
 	}
 
-	h.Logger.Info("Product created successfully")
-	response := product.ToResponse()
-	h.WriteJSON(w, http.StatusCreated, response)
+	pkgLogger.InfoWithRequestID(r, "request to create product", logrus.Fields{
+		"method": r.Method,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestEnd,
+	})
+	h.WriteJSON(r, w, http.StatusCreated, product)
 }
 
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	product, err := h.repository.GetByID(idStr)
-	if err != nil {
-		if appError, ok := pkgErrors.AsAppError(err); ok {
-			switch appError.Code {
-			case pkgErrors.ErrNotFound.Code:
-				h.Logger.Warn("Product not found", "id", idStr)
-				h.WriteError(w, pkgErrors.NewNotFoundError("product not found"))
-				return
-			case pkgErrors.ErrInvalidId.Code:
-				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
-				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
-				return
-			}
-		} else {
-			h.Logger.Error("Failed to get product", "error", err)
-			h.WriteError(w, err)
-			return
-		}
-	}
-	response := product.ToDetailResponse()
-	h.Logger.Info("Product found successfully")
-	h.WriteJSON(w, http.StatusOK, response)
-}
 
-func (h *Handler) getAll(w http.ResponseWriter, _ *http.Request) {
-	products, err := h.repository.GetAll()
+	pkgLogger.InfoWithRequestID(r, "request to get product by id", logrus.Fields{
+		"method": r.Method,
+		"id":     idStr,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestStart,
+	})
+
+	product, err := h.repository.GetByID(r, idStr)
 	if err != nil {
-		h.Logger.Error("Failed to get products", "error", err)
 		h.WriteError(w, err)
 		return
 	}
 
-	response := ToListResponseArray(products)
-	h.Logger.Info("Products retrieved successfully", "count", len(products))
-	h.WriteJSON(w, http.StatusOK, response)
-}
-
-func (h *Handler) updateAll(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-
-	searchedProduct := h.isExists(w, idStr)
-	if searchedProduct == nil {
-		return
-	}
-	id := searchedProduct.ID
-
-	var replaceReq ReplaceRequest
-	if err := h.ParseJSON(r, &replaceReq); err != nil {
-		h.Logger.Error("Failed to parse JSON", "error", err)
-		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("invalid JSON format"))
-		return
-	}
-
-	if err := replaceReq.Validate(); err != nil {
-		h.Logger.Error("Validation failed", "error", err)
-		h.WriteError(w, pkgErrors.NewJsonUnmarshalError(err.Error()))
-		return
-	}
-
-	product := replaceReq.ToProduct(id)
-	if err := h.repository.UpdateAll(product); err != nil {
-		h.Logger.Error("Failed to replace product", "error", err)
-		h.WriteError(w, err)
-		return
-	}
-
-	response := product.ToDetailResponse()
-	h.Logger.Info("Product replaced successfully", "id", idStr)
-	h.WriteJSON(w, http.StatusOK, response)
+	pkgLogger.InfoWithRequestID(r, "request to get product by id", logrus.Fields{
+		"method": r.Method,
+		"id":     idStr,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestEnd,
+	})
+	h.WriteJSON(r, w, http.StatusOK, product)
 }
 
 func (h *Handler) updatePartial(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 
-	var updateReq UpdateRequest
-	if err := h.ParseJSON(r, &updateReq); err != nil {
-		h.Logger.Error("Failed to parse JSON", "error", err)
-		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("invalid JSON format"))
-		return
-	}
+	pkgLogger.InfoWithRequestID(r, "request to update product", logrus.Fields{
+		"method": r.Method,
+		"id":     idStr,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestStart,
+	})
 
-	if !updateReq.HasFields() {
-		h.Logger.Error("No fields provided for update")
-		h.WriteError(w, pkgErrors.NewJsonUnmarshalError("at least one field must be provided"))
-		return
-	}
-
-	fields := updateReq.ToFieldsMap()
-	if err := h.repository.UpdatePartial(idStr, fields); err != nil {
-		if appError, ok := pkgErrors.AsAppError(err); ok {
-			switch appError.Code {
-			case pkgErrors.ErrNotFound.Code:
-				h.Logger.Warn("Product not found for partial update", "id", idStr)
-				h.WriteError(w, pkgErrors.NewNotFoundError(idStr))
-				return
-			case pkgErrors.ErrInvalidId.Code:
-				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
-				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
-				return
-			}
-		}
-		h.Logger.Error("Failed to update product", "error", err)
+	var product *Product
+	if err := h.ParseJSON(r, &product); err != nil {
 		h.WriteError(w, err)
 		return
 	}
 
-	updatedProduct, err := h.repository.GetByID(idStr)
+	if !product.HasFields() {
+		h.WriteError(w, errors.New("at least one field must be provided"))
+		return
+	}
+
+	fields := product.ToFieldsMap()
+
+	if err := h.repository.UpdatePartial(r, idStr, fields); err != nil {
+		h.WriteError(w, err)
+		return
+	}
+
+	updatedProduct, err := h.repository.GetByID(r, idStr)
 	if err != nil {
-		h.Logger.Error("Failed to get updated product", "error", err)
+		pkgLogger.ErrorWithRequestID(r, "failed to get updated product", logrus.Fields{
+			"method": r.Method,
+			"id":     idStr,
+			"url":    r.URL.String(),
+			"type":   pkgLogger.HandlerError,
+			"error":  err.Error(),
+		})
 		h.WriteError(w, err)
 		return
 	}
 
-	response := updatedProduct.ToDetailResponse()
-	h.Logger.Info("Product updated successfully", "id", idStr)
-	h.WriteJSON(w, http.StatusOK, response)
+	pkgLogger.InfoWithRequestID(r, "request to update product", logrus.Fields{
+		"method": r.Method,
+		"id":     idStr,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestEnd,
+	})
+	h.WriteJSON(r, w, http.StatusOK, updatedProduct)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	if err := h.repository.Delete(idStr); err != nil {
-		if appError, ok := pkgErrors.AsAppError(err); ok {
-			switch appError.Code {
-			case pkgErrors.ErrNotFound.Code:
-				h.Logger.Warn("Product not found", "id", idStr)
-				h.WriteError(w, pkgErrors.NewNotFoundError(idStr))
-				return
-			case pkgErrors.ErrInvalidId.Code:
-				h.Logger.Error("Invalid product ID format", "id", idStr, "error", err)
-				h.WriteError(w, pkgErrors.NewInvalidIdError(idStr))
-				return
-			}
-		}
-		h.Logger.Error("Failed to delete product", "error", err)
+	pkgLogger.InfoWithRequestID(r, "request to delete product", logrus.Fields{
+		"method": r.Method,
+		"id":     idStr,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestStart,
+	})
+
+	if err := h.repository.Delete(r, idStr); err != nil {
 		h.WriteError(w, err)
 		return
 	}
 
-	h.Logger.Info("Product deleted successfully", "id", idStr)
-	h.WriteJSON(w, http.StatusOK, map[string]interface{}{
+	pkgLogger.InfoWithRequestID(r, "request to delete product", logrus.Fields{
+		"method": r.Method,
+		"id":     idStr,
+		"url":    r.URL.String(),
+		"type":   pkgLogger.HandlerRequestEnd,
+	})
+	h.WriteJSON(r, w, http.StatusOK, map[string]interface{}{
 		"id":      idStr,
 		"message": "Product deleted successfully",
 	})
-}
-
-func (h *Handler) isExists(w http.ResponseWriter, idStr string) *Product {
-	searchedProduct, err := h.repository.GetByID(idStr)
-	if err != nil {
-		if appError, ok := pkgErrors.AsAppError(err); ok {
-			switch appError.Code {
-			case pkgErrors.ErrNotFound.Code:
-				h.Logger.Warn("Product not found for replacement")
-				h.WriteError(w, pkgErrors.NewNotFoundError("product not found"))
-				return nil
-			case pkgErrors.ErrInvalidId.Code:
-				h.Logger.Error("Invalid product ID format", "error", err)
-				h.WriteError(w, pkgErrors.NewInvalidIdError(""))
-				return nil
-			}
-		}
-		h.Logger.Error("Failed to get product for replacement", "error", err)
-		h.WriteError(w, err)
-		return nil
-	}
-
-	return searchedProduct
 }

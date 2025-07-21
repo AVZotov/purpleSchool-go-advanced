@@ -1,7 +1,7 @@
 package system
 
 import (
-	"link_shortener"
+	mainversion "link_shortener"
 	"link_shortener/internal/http-server/handlers/base"
 	"link_shortener/pkg/logger"
 	"net/http"
@@ -33,10 +33,10 @@ func (h *Handler) registerRoutes(mux *http.ServeMux) {
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 	response := map[string]interface{}{
 		"status":    "OK",
-		"service":   link_shortener.AppName,
+		"service":   mainversion.AppName,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"version":   link_shortener.Version,
-		"buildDate": link_shortener.BuildDate,
+		"version":   mainversion.Version,
+		"buildDate": mainversion.BuildDate,
 	}
 	h.WriteJSON(w, http.StatusOK, response)
 }

@@ -36,7 +36,7 @@ func (h *Handler) WriteJSON(r *http.Request, w http.ResponseWriter, status int, 
 			"type":  pkgLogger.JSONError,
 			"error": err.Error(),
 		})
-		h.WriteError(w, err)
+		http.Error(w, "error encoding json", http.StatusInternalServerError)
 	}
 }
 
@@ -63,13 +63,12 @@ func (h *Handler) WriteError(w http.ResponseWriter, err error) {
 	}
 }
 
-func (h *Handler) ParseJSON(r *http.Request, w http.ResponseWriter, v any) error {
+func (h *Handler) ParseJSON(r *http.Request, v any) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		pkgLogger.ErrorWithRequestID(r, "error decoding json", logrus.Fields{
 			"type":  pkgLogger.JSONError,
 			"error": err.Error(),
 		})
-		h.WriteError(w, err)
 		return fmt.Errorf("could not parse request body: %w", err)
 	}
 
