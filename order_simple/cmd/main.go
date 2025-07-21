@@ -2,27 +2,31 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"order_simple/internal/config"
-	"time"
+	"order_simple/pkg/db"
+	pkgLogger "order_simple/pkg/logger"
+	"order_simple/pkg/migrations"
 )
 
-var logger *logrus.Logger
-
-func init() {
-	logger = logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: time.RFC3339,
-	})
-	logger.SetLevel(logrus.InfoLevel)
-}
-
 func main() {
-	logger.Info("starting application")
 
 	cfg, err := config.MustLoadConfig("configs.yml")
 	if err != nil {
-		logger.Fatal(err)
+		panic(err)
 	}
 
+	pkgLogger.Init()
+	pkgLogger.LogApplicationStart(cfg)
+
+	database, err := db.New(cfg)
+	if err != nil {
+		pkgLogger.LogDatabaseError("error to initiate DB", err)
+		panic(err)
+	}
+	err = migrations.RunMigrations(database.DB)
+	if err != nil {
+		return
+	}
+
+	fmt.Println(database.DB.RowsAffected)
 }
