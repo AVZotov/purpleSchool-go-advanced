@@ -4,16 +4,25 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	pkgLogger "order_simple/pkg/logger"
+	"os"
 	"time"
 )
 
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var logger *logrus.Logger
+		logger = logrus.New()
+		logger.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339,
+		})
+		logger.SetLevel(logrus.InfoLevel)
+		logger.SetOutput(os.Stdout)
+
 		start := time.Now()
 
 		requestID := r.Header.Get(pkgLogger.RequestIDHeader)
 
-		pkgLogger.Logger.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"request_id": requestID,
 			"method":     r.Method,
 			"path":       r.URL.Path,
@@ -32,7 +41,7 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		pkgLogger.Logger.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"request_id":     requestID,
 			"method":         r.Method,
 			"path":           r.URL.Path,
