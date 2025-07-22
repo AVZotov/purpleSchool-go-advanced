@@ -19,3 +19,7 @@ func GetSMSCode() int {
 	n, _ := rand.Int(rand.Reader, mx)
 	return int(n.Int64()) + 1000
 }
+
+func GetDevSMSCode() int {
+	return 3245
+}
