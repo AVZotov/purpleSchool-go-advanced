@@ -14,12 +14,12 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
 	const DevFile = "configs.yml"
 
-	cfg, err := config.MustLoadConfig("configs.yml")
+	cfg, err := config.MustLoadConfig(DevFile)
 	if err != nil {
-		//log.Fatalf("Error loading config: %v", err)
-		panic(err)
+		log.Fatalf("Error loading config: %v", err)
 	}
 	fmt.Printf("%+v\n", cfg)
 }
