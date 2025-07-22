@@ -4,6 +4,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"log"
 	"order_api_auth/internal/config"
+	"order_api_auth/pkg/db"
 	pkgLogger "order_api_auth/pkg/logger"
 	"os"
 )
@@ -29,7 +30,18 @@ func main() {
 		"env":    cfg.Env.String(),
 	}).Info("logger initialized")
 
-	//TODO: DB setup
+	dtb, err := db.New(cfg)
+	if err != nil {
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Fatal("failed to init db")
+		panic(err)
+	}
+	pkgLogger.Logger.WithFields(logrus.Fields{
+		"db_host": cfg.Database.Host,
+		"db_port": cfg.Database.Port,
+		"dialect": dtb.Dialector.Name(),
+	}).Info("database initialized")
 
 	//TODO: Handler setup
 
