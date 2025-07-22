@@ -5,9 +5,11 @@ import (
 	"log"
 	"net/http"
 	"order_api_auth/internal/config"
+	"order_api_auth/internal/http/server"
 	"order_api_auth/pkg/db"
 	pkgLogger "order_api_auth/pkg/logger"
 	mw "order_api_auth/pkg/middleware"
+	pkgValidator "order_api_auth/pkg/validator"
 	"os"
 )
 
@@ -25,6 +27,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
+
+	pkgValidator.Init()
 
 	pkgLogger.Init()
 	pkgLogger.Logger.WithFields(logrus.Fields{
@@ -52,10 +56,21 @@ func main() {
 	stack := mw.Chain(
 		mw.RequestIDMiddleware,
 		mw.LoggerMiddleware,
-	)
+	) //TODO: Implement all other mw's
 
 	handler := stack(mux)
-	print(handler) //TODO: Delete this
+	print(handler)
+
+	srv := server.New(cfg.HttpServer.Port, handler)
+	err = srv.ListenAndServe()
+	if err != nil {
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Fatal("failed to start server")
+		panic(err)
+	}
+
+	//TODO: Delete this
 
 	//TODO: Auth domain setup
 
