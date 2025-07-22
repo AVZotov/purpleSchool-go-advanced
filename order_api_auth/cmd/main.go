@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"github.com/sirupsen/logrus"
 	"log"
 	"order_api_auth/internal/config"
+	pkgLogger "order_api_auth/pkg/logger"
 	"os"
 )
 
@@ -21,5 +22,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
-	fmt.Printf("%+v\n", cfg)
+
+	pkgLogger.Init()
+	pkgLogger.Logger.WithFields(logrus.Fields{
+		"logger": pkgLogger.Logger.Level,
+		"env":    cfg.Env.String(),
+	}).Info("logger initialized")
+
+	//TODO: DB setup
+
+	//TODO: Handler setup
+
+	//TODO AUTH Middleware setup
 }
