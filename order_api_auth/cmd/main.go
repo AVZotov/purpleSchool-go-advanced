@@ -57,7 +57,7 @@ func main() {
 	handler := stack(mux)
 	print(handler) //TODO: Delete this
 
-	//TODO: Handler setup
+	//TODO: Auth domain setup
 
 	//TODO AUTH Middleware setup
 }
