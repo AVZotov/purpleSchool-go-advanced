@@ -20,6 +20,6 @@ func GetSMSCode() int {
 	return int(n.Int64()) + 1000
 }
 
-func GetDevSMSCode() int {
+func GetFakeSMSCode() int {
 	return 3245
 }

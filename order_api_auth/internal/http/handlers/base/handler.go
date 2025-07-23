@@ -12,7 +12,6 @@ type Handler struct{}
 
 type ErrorInfo struct {
 	Code    string `json:"code"`
-	Message string `json:"message"`
 	Details string `json:"details,omitempty"`
 }
 
@@ -33,19 +32,18 @@ func (h *Handler) WriteJSON(r *http.Request, w http.ResponseWriter, status int, 
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		pkgLogger.ErrorWithRequestID(r, "error encoding json", logrus.Fields{
-			"type":  pkgLogger.JsonError,
 			"error": err.Error(),
 		})
 		http.Error(w, "error encoding json", http.StatusInternalServerError)
+		return
 	}
 }
 
-func (h *Handler) WriteError(w http.ResponseWriter, err error) {
+func (h *Handler) WriteError(w http.ResponseWriter, statusCode int, err error) {
 	var errorInfo ErrorInfo
-	status := http.StatusInternalServerError
+	status := statusCode
 	errorInfo = ErrorInfo{
-		Code:    http.StatusText(http.StatusInternalServerError),
-		Message: "Internal Server Error",
+		Code:    http.StatusText(statusCode),
 		Details: err.Error(),
 	}
 
@@ -60,13 +58,13 @@ func (h *Handler) WriteError(w http.ResponseWriter, err error) {
 	if err = json.NewEncoder(w).Encode(response); err != nil {
 		pkgLogger.Logger.Error(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
 func (h *Handler) ParseJSON(r *http.Request, v any) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		pkgLogger.ErrorWithRequestID(r, "error decoding json", logrus.Fields{
-			"type":  pkgLogger.JsonError,
 			"error": err.Error(),
 		})
 		return fmt.Errorf("could not parse request body: %w", err)

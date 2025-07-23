@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"order_api_auth/internal/config"
+	"order_api_auth/internal/domain/auth/session"
 	"order_api_auth/internal/http/server"
 	"order_api_auth/pkg/db"
 	pkgLogger "order_api_auth/pkg/logger"
@@ -28,7 +29,12 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	pkgValidator.Init()
+	if err = pkgValidator.Init(); err != nil {
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Fatal("Error initializing validator")
+		panic(err)
+	}
 
 	pkgLogger.Init()
 	pkgLogger.Logger.WithFields(logrus.Fields{
@@ -53,13 +59,18 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	sessionService := session.NewService(nil)
+
+	//TODO: Implement Repository
+
+	session.NewHandler(mux, nil, sessionService)
+
 	stack := mw.Chain(
 		mw.RequestIDMiddleware,
 		mw.LoggerMiddleware,
 	) //TODO: Implement all other mw's
 
 	handler := stack(mux)
-	print(handler)
 
 	srv := server.New(cfg.HttpServer.Port, handler)
 	err = srv.ListenAndServe()

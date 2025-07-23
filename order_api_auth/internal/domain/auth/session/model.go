@@ -6,7 +6,7 @@ import (
 
 type Session struct {
 	gorm.Model
-	Phone     string `json:"phone" validate:"required,phone" gorm:"index"`
-	SessionID string `json:"session_id,omitempty" validate:"required,session_id" gorm:"index;size:64"`
-	SMSCode   string `json:"sms_code,omitempty" validate:"required,sms_code" gorm:"size:4"`
+	Phone     string `json:"phone" validate:"required,e164" gorm:"index"`
+	SessionID string `json:"session_id,omitempty" validate:"omitempty,required,hexadecimal,len=64" gorm:"index;size:64"`
+	SMSCode   string `json:"sms_code,omitempty" validate:"omitempty,required,len=4,numeric" gorm:"size:4"`
 }
