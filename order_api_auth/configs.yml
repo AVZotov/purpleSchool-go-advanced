@@ -16,3 +16,6 @@ data_base:
   name: "order_api_auth"
   ssl_mode: "disable"
   db_volume: "./data"
+
+jwt:
+  secret: "0c0190634e4a08aa38d8d961"

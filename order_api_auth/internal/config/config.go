@@ -59,10 +59,15 @@ type HttpServer struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 }
 
+type JWT struct {
+	Secret string `yaml:"secret" env:"JWT_SECRET" env-required:"true"`
+}
+
 type Config struct {
 	Env        Environment `yaml:"env" env:"APP_ENV" env-required:"true"`
 	Database   Database    `yaml:"data_base" env:"APP_DATABASE" env-required:"true"`
 	HttpServer HttpServer  `yaml:"http_server" env:"HTTP_SERVER" env-required:"true"`
+	JWT        JWT         `yaml:"jwt" env:"JWT_JWT" env-required:"true"`
 }
 
 // MustLoadConfig returns pointer on [Config] with all the credentials required
