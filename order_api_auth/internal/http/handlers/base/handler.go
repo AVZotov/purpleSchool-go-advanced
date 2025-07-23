@@ -39,7 +39,7 @@ func (h *Handler) WriteJSON(r *http.Request, w http.ResponseWriter, status int, 
 	}
 }
 
-func (h *Handler) WriteError(w http.ResponseWriter, statusCode int, err error) {
+func (h *Handler) WriteError(r *http.Request, w http.ResponseWriter, statusCode int, err error) {
 	var errorInfo ErrorInfo
 	status := statusCode
 	errorInfo = ErrorInfo{
@@ -56,7 +56,9 @@ func (h *Handler) WriteError(w http.ResponseWriter, statusCode int, err error) {
 	}
 
 	if err = json.NewEncoder(w).Encode(response); err != nil {
-		pkgLogger.Logger.Error(err.Error())
+		pkgLogger.ErrorWithRequestID(r, "error encoding json", logrus.Fields{
+			"error": err.Error(),
+		})
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

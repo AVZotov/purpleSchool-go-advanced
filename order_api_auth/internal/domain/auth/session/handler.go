@@ -32,7 +32,7 @@ func (h *Handler) registerRoutes(mux *http.ServeMux) {
 }
 
 func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
-	pkgLogger.InfoWithRequestID(r, "request for session", logrus.Fields{
+	pkgLogger.InfoWithRequestID(r, "request for session in handler", logrus.Fields{
 		"method": r.Method,
 		"url":    r.URL.String(),
 	})
@@ -40,20 +40,37 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 	var session Session
 
 	if err := h.ParseJSON(r, &session); err != nil {
-		h.WriteError(w, http.StatusBadRequest, err)
+		h.WriteError(r, w, http.StatusBadRequest, err)
 		return
 	}
 
 	if err := pkgValidator.ValidateStruct(&session); err != nil {
-		h.WriteError(w, http.StatusBadRequest, err)
+		pkgLogger.ErrorWithRequestID(r, "validation failed", logrus.Fields{
+			"error": err.Error(),
+		})
+		h.WriteError(r, w, http.StatusBadRequest, err)
 		return
 	}
-	err := h.Service.SendSessionID(&session)
+	err := h.Service.CreateSession(r, &session)
 	if err != nil {
-		h.WriteError(w, http.StatusInternalServerError, err)
+		h.WriteError(r, w, http.StatusInternalServerError, err)
+		return
 	}
 
-	h.WriteJSON(r, w, http.StatusOK, session)
+	response := ResponseWithSession{
+		SessionID: session.SessionID,
+	}
+
+	err = pkgValidator.ValidateStruct(&response)
+	if err != nil {
+		pkgLogger.ErrorWithRequestID(r, "response validation failed", logrus.Fields{
+			"error": err.Error(),
+		})
+		h.WriteError(r, w, http.StatusInternalServerError, err)
+		return
+	}
+
+	h.WriteJSON(r, w, http.StatusOK, response)
 }
 
 func (h *Handler) verifySessionCode(w http.ResponseWriter, r *http.Request) {

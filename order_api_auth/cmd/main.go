@@ -29,18 +29,18 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
+	pkgLogger.Init()
+	pkgLogger.Logger.WithFields(logrus.Fields{
+		"logger": pkgLogger.Logger.Level,
+		"env":    cfg.Env.String(),
+	}).Info("logger initialized")
+
 	if err = pkgValidator.Init(); err != nil {
 		pkgLogger.Logger.WithFields(logrus.Fields{
 			"error": err.Error(),
 		}).Fatal("Error initializing validator")
 		panic(err)
 	}
-
-	pkgLogger.Init()
-	pkgLogger.Logger.WithFields(logrus.Fields{
-		"logger": pkgLogger.Logger.Level,
-		"env":    cfg.Env.String(),
-	}).Info("logger initialized")
 
 	dtb, err := db.New(cfg)
 	if err != nil {
@@ -59,7 +59,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	sessionService := session.NewService(nil)
+	sessionRepo := session.NewRepository(dtb)
+
+	sessionService := session.NewService(sessionRepo)
 
 	//TODO: Implement Repository
 
