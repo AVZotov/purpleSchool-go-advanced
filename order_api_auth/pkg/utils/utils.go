@@ -14,7 +14,7 @@ func GenerateSessionID() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func GetSMSCode() int {
+func _() int {
 	mx := big.NewInt(9000)
 	n, _ := rand.Int(rand.Reader, mx)
 	return int(n.Int64()) + 1000
