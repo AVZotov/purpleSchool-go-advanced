@@ -81,6 +81,12 @@ func (s *ServiceSession) VerifySession(r *http.Request, session *Session) (strin
 		return "", ErrInvalidSMSCode
 	}
 
+	if err := s.repository.DeleteSession(r, &requestedSession); err != nil {
+		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+	}
+
 	jwtString, err := pkgJWT.Create(s.secret, requestedSession.Phone)
 	if err != nil {
 		pkgLogger.ErrorWithRequestID(r, ErrGeneratingToken.Error(), logrus.Fields{

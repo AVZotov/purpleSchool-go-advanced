@@ -49,13 +49,18 @@ func (rep *RepositorySession) GetSession(r *http.Request, session *Session, sess
 }
 
 func (rep *RepositorySession) DeleteSession(r *http.Request, session *Session) error {
-	if err := rep.db.DeleteBy(
-		&Session{}, "session_id = ?", session.SessionID); err != nil {
+	rowsAffected, err := rep.db.DeleteBy(&Session{}, "session_id = ?", session.SessionID)
+	if err != nil {
 		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
-
 		return err
+	}
+	if rowsAffected == 0 {
+		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+			"error": ErrSessionNotFound.Error(),
+		})
+		return ErrSessionNotFound
 	}
 
 	return nil

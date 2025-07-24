@@ -5,5 +5,5 @@ type ResponseWithSession struct {
 }
 
 type ResponseWithJWT struct {
-	JWT string `json:"json" validate:"required,jwt"`
+	JWT string `json:"token" validate:"required"`
 }

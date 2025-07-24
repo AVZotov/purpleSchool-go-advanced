@@ -54,13 +54,13 @@ func (db *DB) FindBy(model any, conditions ...any) error {
 	return nil
 }
 
-func (db *DB) DeleteBy(model any, conditions ...any) error {
+func (db *DB) DeleteBy(model any, conditions ...any) (int64, error) {
 	result := db.DB.Delete(model, conditions)
 	if result.Error != nil {
-		return result.Error
+		return 0, result.Error
 	}
 
-	return nil
+	return result.RowsAffected, nil
 }
 
 func (db *DB) healthCheck() error {
