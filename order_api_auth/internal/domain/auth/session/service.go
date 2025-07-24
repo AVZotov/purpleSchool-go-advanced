@@ -37,16 +37,16 @@ func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error 
 		return errors.Join(ErrGeneratingSessionID, err)
 	}
 
-	smsCode := utils.GetFakeSMSCode()
+	smsCode := utils.GetFakeCode()
 	session.SessionID = sessionID
-	session.SMSCode = strconv.Itoa(smsCode)
+	session.SMSCode = smsCode
 
 	err = s.repository.CreateSession(r, session)
 	if err != nil {
 		return errors.Join(ErrCreatingSession, err)
 	}
 
-	smsErr := sms.SendFakeSMS(session.Phone, session.SMSCode)
+	smsErr := sms.SendFakeSMS(session.Phone, strconv.Itoa(session.SMSCode))
 	if smsErr != nil {
 		pkgLogger.ErrorWithRequestID(r, ErrSendingSMS.Error(), logrus.Fields{
 			"error": smsErr.Error(),

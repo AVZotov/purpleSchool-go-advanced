@@ -38,19 +38,23 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 		"url":    r.URL.String(),
 	})
 
-	var session Session
+	var request SendCodeRequest
 
-	if err := h.ParseJSON(r, &session); err != nil {
+	if err := h.ParseJSON(r, &request); err != nil {
 		h.WriteError(r, w, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := verifySessionRequest(&session); err != nil {
-		pkgLogger.ErrorWithRequestID(r, "request verification failed", logrus.Fields{
+	if err := pkgValidator.ValidateStruct(&request); err != nil {
+		pkgLogger.ErrorWithRequestID(r, "request validation failed", logrus.Fields{
 			"error": err.Error(),
 		})
 		h.WriteError(r, w, http.StatusBadRequest, err)
 		return
+	}
+
+	session := Session{
+		Phone: request.Phone,
 	}
 
 	if err := h.Service.CreateSession(r, &session); err != nil {
@@ -77,19 +81,24 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 		"url":    r.URL.String(),
 	})
 
-	var session Session
+	var request VerifyCodeRequest
 
-	if err := h.ParseJSON(r, &session); err != nil {
+	if err := h.ParseJSON(r, &request); err != nil {
 		h.WriteError(r, w, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := verifyVerificationRequest(&session); err != nil {
-		pkgLogger.ErrorWithRequestID(r, "request verification failed", logrus.Fields{
+	if err := pkgValidator.ValidateStruct(&request); err != nil {
+		pkgLogger.ErrorWithRequestID(r, "request validation failed", logrus.Fields{
 			"error": err.Error(),
 		})
 		h.WriteError(r, w, http.StatusBadRequest, err)
 		return
+	}
+
+	session := Session{
+		SessionID: request.SessionID,
+		SMSCode:   request.Code,
 	}
 
 	jwtString, err := h.Service.VerifySession(r, &session)
@@ -104,11 +113,10 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 		default:
 			h.WriteError(r, w, http.StatusInternalServerError, err)
 		}
-
 		return
 	}
 
-	response := ResponseWithJWT{JWT: jwtString}
+	response := ResponseWithJWT{Token: jwtString}
 	if err = pkgValidator.ValidateStruct(&response); err != nil {
 		pkgLogger.ErrorWithRequestID(r, "response validation failed", logrus.Fields{
 			"error": err.Error(),
@@ -118,31 +126,4 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.WriteJSON(r, w, http.StatusOK, response)
-}
-
-func verifySessionRequest(session *Session) error {
-	if session.Phone == "" {
-		return errors.New("error phone is empty")
-	}
-
-	if err := pkgValidator.ValidateStruct(session); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyVerificationRequest(session *Session) error {
-	if session.SessionID == "" {
-		return errors.New("error sessionID is empty")
-	}
-
-	if session.SMSCode == "" {
-		return errors.New("error code is empty")
-	}
-
-	if err := pkgValidator.ValidateStruct(session); err != nil {
-		return errors.New("verification failed")
-	}
-
-	return nil
 }

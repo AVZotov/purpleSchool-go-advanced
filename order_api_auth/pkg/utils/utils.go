@@ -20,6 +20,6 @@ func _() int {
 	return int(n.Int64()) + 1000
 }
 
-func GetFakeSMSCode() int {
+func GetFakeCode() int {
 	return 3245
 }
