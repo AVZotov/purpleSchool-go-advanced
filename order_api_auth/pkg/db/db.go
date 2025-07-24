@@ -21,8 +21,7 @@ func New(config *config.Config) (*DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		pkgLogger.Logger.WithFields(logrus.Fields{
-			"type": pkgLogger.DBError,
-			"err":  err.Error(),
+			"error": err.Error(),
 		}).Error("failed to connect to database")
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -34,10 +33,9 @@ func New(config *config.Config) (*DB, error) {
 	pkgLogger.Logger.Info("successfully connected to database")
 	if err = dbStruct.healthCheck(); err != nil {
 		pkgLogger.Logger.WithFields(logrus.Fields{
-			"type": pkgLogger.DBError,
-			"err":  err.Error(),
-		}).Error("failed healthcheck")
-		return nil, fmt.Errorf("failed healthcheck: %w", err)
+			"error": err.Error(),
+		}).Error("healthcheck failed")
+		return nil, fmt.Errorf("healthcheck failed: %w", err)
 	}
 
 	return dbStruct, nil

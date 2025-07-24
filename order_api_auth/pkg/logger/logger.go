@@ -54,18 +54,6 @@ func ErrorWithRequestID(r *http.Request, message string, fields logrus.Fields) {
 	LogWithRequestID(r, logrus.ErrorLevel, message, fields)
 }
 
-func WarnWithRequestID(r *http.Request, message string, fields logrus.Fields) {
-	LogWithRequestID(r, logrus.WarnLevel, message, fields)
-}
-
 func GetRequestID(r *http.Request) string {
 	return r.Header.Get(pkgHeaders.RequestIDHeader)
-}
-
-func GetClientIP(r *http.Request) string {
-	forwarded := r.Header.Get(pkgHeaders.RequestIPHeader)
-	if forwarded != "" {
-		return forwarded
-	}
-	return r.RemoteAddr
 }

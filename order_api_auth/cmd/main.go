@@ -8,6 +8,7 @@ import (
 	"order_api_auth/internal/domain/auth/session"
 	"order_api_auth/internal/http/server"
 	"order_api_auth/pkg/db"
+	"order_api_auth/pkg/db/migrations"
 	pkgLogger "order_api_auth/pkg/logger"
 	mw "order_api_auth/pkg/middleware"
 	pkgValidator "order_api_auth/pkg/validator"
@@ -55,22 +56,22 @@ func main() {
 		"dialect": dtb.Dialector.Name(),
 	}).Info("database initialized")
 
-	//TODO: Implement DB migrations
+	if err = migrations.RunMigrations(dtb.DB); err != nil {
+		panic(err)
+	}
 
 	mux := http.NewServeMux()
 
 	sessionRepo := session.NewRepository(dtb)
 
-	sessionService := session.NewService(sessionRepo)
-
-	//TODO: Implement Repository
+	sessionService := session.NewService(sessionRepo, cfg.JWT.Secret)
 
 	session.NewHandler(mux, nil, sessionService)
 
 	stack := mw.Chain(
 		mw.RequestIDMiddleware,
 		mw.LoggerMiddleware,
-	) //TODO: Implement all other mw's
+	)
 
 	handler := stack(mux)
 
@@ -82,10 +83,4 @@ func main() {
 		}).Fatal("failed to start server")
 		panic(err)
 	}
-
-	//TODO: Delete this
-
-	//TODO: Auth domain setup
-
-	//TODO AUTH Middleware setup
 }

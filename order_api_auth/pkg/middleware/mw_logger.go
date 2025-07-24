@@ -31,8 +31,7 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			"query":      r.URL.RawQuery,
 			"user_agent": r.UserAgent(),
 			"ip":         getClientIP(r),
-			"type":       pkgLogger.HttpRequestStart,
-		}).Info("HTTP request started")
+		}).Info("HTTP request received")
 
 		wrapper := &responseWriter{
 			ResponseWriter: w,
@@ -51,9 +50,8 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			"duration_ms":    duration.Milliseconds(),
 			"user_agent":     r.UserAgent(),
 			"ip":             getClientIP(r),
-			"type":           pkgLogger.HttpRequestEnd,
 			"content_length": r.ContentLength,
-		}).Info("HTTP request completed")
+		}).Info("HTTP response sent")
 	})
 }
 
