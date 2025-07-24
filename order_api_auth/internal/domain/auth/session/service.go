@@ -67,7 +67,7 @@ func (s *ServiceSession) VerifySession(r *http.Request, session *Session) (strin
 	pkgLogger.InfoWithRequestID(r, "request for validation passed to service layer", logrus.Fields{})
 
 	var requestedSession Session
-	if err := s.repository.GetSession(r, &requestedSession); err != nil {
+	if err := s.repository.GetSession(r, &requestedSession, session.SessionID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", errors.Join(ErrSessionNotFound, err)
 		}

@@ -125,7 +125,7 @@ func verifySessionRequest(session *Session) error {
 		return errors.New("error phone is empty")
 	}
 
-	if err := pkgValidator.ValidateStruct(&session); err != nil {
+	if err := pkgValidator.ValidateStruct(session); err != nil {
 		return err
 	}
 	return nil
@@ -140,7 +140,7 @@ func verifyVerificationRequest(session *Session) error {
 		return errors.New("error code is empty")
 	}
 
-	if err := pkgValidator.ValidateStruct(&session); err != nil {
+	if err := pkgValidator.ValidateStruct(session); err != nil {
 		return errors.New("verification failed")
 	}
 

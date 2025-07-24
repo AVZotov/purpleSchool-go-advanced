@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	CreateSession(*http.Request, *Session) error
-	GetSession(*http.Request, *Session) error
+	GetSession(*http.Request, *Session, string) error
 	DeleteSession(*http.Request, *Session) error
 }
 
@@ -35,7 +35,7 @@ func (rep *RepositorySession) CreateSession(r *http.Request, session *Session) e
 	return nil
 }
 
-func (rep *RepositorySession) GetSession(r *http.Request, session *Session) error {
+func (rep *RepositorySession) GetSession(r *http.Request, session *Session, sessionID string) error {
 
 	if err := rep.db.FindBy(session, "session_id = ?", session.SessionID); err != nil {
 		pkgLogger.ErrorWithRequestID(r, ErrGettingSession.Error(), logrus.Fields{
