@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
@@ -48,51 +47,22 @@ func (db *DB) Create(v any) error {
 	return db.DB.Create(v).Error
 }
 
-func (db *DB) FindById(model any, id uint) (int64, error) {
-	result := db.DB.First(model, id)
+func (db *DB) FindBy(model any, conditions ...any) error {
+	result := db.DB.Where(conditions[0], conditions[1:]...).First(model)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return 0, nil
-		} else {
-			return 0, fmt.Errorf("finding model failed: %w", result.Error)
-		}
+		return result.Error
 	}
 
-	return result.RowsAffected, nil
+	return nil
 }
 
-func (db *DB) FindAll(model any) error {
-	return db.DB.Find(model).Error
-}
-
-func (db *DB) UpdatePartial(model any, id uint, fields map[string]any) (int64, error) {
-	result := db.DB.Model(model).Where("id = ?", id).Updates(fields)
+func (db *DB) DeleteBy(model any, conditions ...any) error {
+	result := db.DB.Delete(model, conditions)
 	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return 0, nil
-		} else {
-			return 0, fmt.Errorf("updating model failed: %w", result.Error)
-		}
+		return result.Error
 	}
 
-	return result.RowsAffected, nil
-}
-
-func (db *DB) UpdateAll(model any) error {
-	return db.DB.Save(model).Error
-}
-
-func (db *DB) Delete(module any, conditions ...any) (int64, error) {
-	result := db.DB.Delete(module, conditions)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return 0, nil
-		} else {
-			return 0, fmt.Errorf("deleting model failed: %w", result.Error)
-		}
-	}
-
-	return result.RowsAffected, nil
+	return nil
 }
 
 func (db *DB) healthCheck() error {

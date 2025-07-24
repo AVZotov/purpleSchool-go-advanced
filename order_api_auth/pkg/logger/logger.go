@@ -19,7 +19,7 @@ func Init() {
 	Logger.SetOutput(os.Stdout)
 }
 
-func LogWithRequestSessionID(r *http.Request, level logrus.Level, message string, fields logrus.Fields) {
+func LogWithRequestID(r *http.Request, level logrus.Level, message string, fields logrus.Fields) {
 	if fields == nil {
 		fields = logrus.Fields{}
 	}
@@ -27,11 +27,6 @@ func LogWithRequestSessionID(r *http.Request, level logrus.Level, message string
 	requestID := GetRequestID(r)
 	if requestID != "" {
 		fields["request_id"] = requestID
-	}
-
-	sessionID := GetSessionID(r)
-	if sessionID != "" {
-		fields["session_id"] = sessionID
 	}
 
 	entry := Logger.WithFields(fields)
@@ -52,23 +47,19 @@ func LogWithRequestSessionID(r *http.Request, level logrus.Level, message string
 }
 
 func InfoWithRequestID(r *http.Request, message string, fields logrus.Fields) {
-	LogWithRequestSessionID(r, logrus.InfoLevel, message, fields)
+	LogWithRequestID(r, logrus.InfoLevel, message, fields)
 }
 
 func ErrorWithRequestID(r *http.Request, message string, fields logrus.Fields) {
-	LogWithRequestSessionID(r, logrus.ErrorLevel, message, fields)
+	LogWithRequestID(r, logrus.ErrorLevel, message, fields)
 }
 
 func WarnWithRequestID(r *http.Request, message string, fields logrus.Fields) {
-	LogWithRequestSessionID(r, logrus.WarnLevel, message, fields)
+	LogWithRequestID(r, logrus.WarnLevel, message, fields)
 }
 
 func GetRequestID(r *http.Request) string {
 	return r.Header.Get(pkgHeaders.RequestIDHeader)
-}
-
-func GetSessionID(r *http.Request) string {
-	return r.Header.Get(pkgHeaders.SessionIDHeader)
 }
 
 func GetClientIP(r *http.Request) string {

@@ -2,9 +2,10 @@ package session
 
 import (
 	"errors"
-	"fmt"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"net/http"
+	pkgJWT "order_api_auth/pkg/jwt"
 	pkgLogger "order_api_auth/pkg/logger"
 	"order_api_auth/pkg/sms"
 	"order_api_auth/pkg/utils"
@@ -13,15 +14,16 @@ import (
 
 type Service interface {
 	CreateSession(*http.Request, *Session) error
-	VerifySession(sessionID, code string) (jwt string, err error)
+	VerifySession(r *http.Request, session *Session) (string, error)
 }
 
 type ServiceSession struct {
 	repository Repository
+	secret     string
 }
 
-func NewService(repository Repository) *ServiceSession {
-	return &ServiceSession{repository: repository}
+func NewService(repository Repository, secret string) *ServiceSession {
+	return &ServiceSession{repository: repository, secret: secret}
 }
 
 func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error {
@@ -29,10 +31,10 @@ func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error 
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, "error generating sessionID", logrus.Fields{
-			"error": err,
+		pkgLogger.ErrorWithRequestID(r, ErrGeneratingSessionID.Error(), logrus.Fields{
+			"error": err.Error(),
 		})
-		return fmt.Errorf("error generating sessionID: %w", err)
+		return errors.Join(ErrGeneratingSessionID, err)
 	}
 
 	smsCode := utils.GetFakeSMSCode()
@@ -41,32 +43,51 @@ func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error 
 
 	err = s.repository.CreateSession(r, session)
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, "error creating session in DB", logrus.Fields{
-			"error": err,
-		})
-		return fmt.Errorf("error creating session in DB: %w", err)
+		return errors.Join(ErrCreatingSession, err)
 	}
 
 	smsErr := sms.SendFakeSMS(session.Phone, session.SMSCode)
 	if smsErr != nil {
-		pkgLogger.ErrorWithRequestID(r, "error sending fake sms code", logrus.Fields{
+		pkgLogger.ErrorWithRequestID(r, ErrSendingSMS.Error(), logrus.Fields{
 			"error": smsErr.Error(),
 		})
-		deleteErr := s.repository.DeleteSession(session.SessionID)
+		deleteErr := s.repository.DeleteSession(r, session)
 		if deleteErr != nil {
-			pkgLogger.ErrorWithRequestID(r, "error sending fake sms code", logrus.Fields{
+			pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
 				"error": deleteErr.Error(),
 			})
 		}
-
-		return fmt.Errorf("error sending fake sms code: %w",
-			errors.Join(smsErr, deleteErr))
+		return errors.Join(ErrSendingSMS, smsErr, ErrDeletingSession, deleteErr)
 	}
 
 	return nil
 }
 
-func (s *ServiceSession) VerifySession(sessionID, code string) (jwt string, err error) {
-	//TODO: Implement method
-	panic("implement me")
+func (s *ServiceSession) VerifySession(r *http.Request, session *Session) (string, error) {
+	pkgLogger.InfoWithRequestID(r, "request for validation passed to service layer", logrus.Fields{})
+
+	var requestedSession Session
+	if err := s.repository.GetSession(r, &requestedSession); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", errors.Join(ErrSessionNotFound, err)
+		}
+		return "", errors.Join(ErrDBInternalError, err)
+	}
+
+	if session.SMSCode != requestedSession.SMSCode {
+		pkgLogger.ErrorWithRequestID(r, ErrInvalidSMSCode.Error(), logrus.Fields{
+			"error": ErrInvalidSMSCode.Error(),
+		})
+		return "", ErrInvalidSMSCode
+	}
+
+	jwtString, err := pkgJWT.Create(s.secret, requestedSession.Phone)
+	if err != nil {
+		pkgLogger.ErrorWithRequestID(r, ErrGeneratingToken.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+		return "", errors.Join(ErrInternalError, ErrGeneratingToken)
+	}
+
+	return jwtString, nil
 }

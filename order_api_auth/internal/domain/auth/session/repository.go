@@ -1,7 +1,6 @@
 package session
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"order_api_auth/pkg/db"
@@ -10,8 +9,8 @@ import (
 
 type Repository interface {
 	CreateSession(*http.Request, *Session) error
-	GetSession(sessionID string) (*Session, error)
-	DeleteSession(sessionID string) error
+	GetSession(*http.Request, *Session) error
+	DeleteSession(*http.Request, *Session) error
 }
 
 type RepositorySession struct {
@@ -27,19 +26,37 @@ func NewRepository(db *db.DB) *RepositorySession {
 func (rep *RepositorySession) CreateSession(r *http.Request, session *Session) error {
 	err := rep.db.Create(session)
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, "error storing session in DB", logrus.Fields{})
-		return fmt.Errorf("error storing session in DB: %w", err)
+		pkgLogger.ErrorWithRequestID(r, ErrCreatingSession.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+		return err
 	}
 
 	return nil
 }
 
-func (rep *RepositorySession) GetSession(sessionID string) (*Session, error) {
-	//TODO: Implement me
-	return nil, nil
+func (rep *RepositorySession) GetSession(r *http.Request, session *Session) error {
+
+	if err := rep.db.FindBy(session, "session_id = ?", session.SessionID); err != nil {
+		pkgLogger.ErrorWithRequestID(r, ErrGettingSession.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+
+		return err
+	}
+
+	return nil
 }
 
-func (rep *RepositorySession) DeleteSession(sessionID string) error {
-	//TODO: Implement me
+func (rep *RepositorySession) DeleteSession(r *http.Request, session *Session) error {
+	if err := rep.db.DeleteBy(
+		&Session{}, "session_id = ?", session.SessionID); err != nil {
+		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+
+		return err
+	}
+
 	return nil
 }
