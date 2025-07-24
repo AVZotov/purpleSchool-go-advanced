@@ -55,11 +55,10 @@ func (db *DB) FindBy(model any, conditions ...any) error {
 }
 
 func (db *DB) DeleteBy(model any, conditions ...any) (int64, error) {
-	result := db.DB.Delete(model, conditions)
+	result := db.DB.Delete(model, conditions...)
 	if result.Error != nil {
 		return 0, result.Error
 	}
-
 	return result.RowsAffected, nil
 }
 
