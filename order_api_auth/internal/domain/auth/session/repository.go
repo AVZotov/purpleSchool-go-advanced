@@ -37,7 +37,7 @@ func (rep *RepositorySession) CreateSession(r *http.Request, session *Session) e
 
 func (rep *RepositorySession) GetSession(r *http.Request, session *Session, sessionID string) error {
 
-	if err := rep.db.FindBy(session, "session_id = ?", session.SessionID); err != nil {
+	if err := rep.db.FindBy(session, "session_id = ?", sessionID); err != nil {
 		pkgLogger.ErrorWithRequestID(r, ErrGettingSession.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
