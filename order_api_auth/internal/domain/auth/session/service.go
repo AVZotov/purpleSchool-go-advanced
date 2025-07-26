@@ -1,10 +1,10 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"net/http"
 	pkgJWT "order_api_auth/pkg/jwt"
 	pkgLogger "order_api_auth/pkg/logger"
 	"order_api_auth/pkg/sms"
@@ -13,8 +13,8 @@ import (
 )
 
 type Service interface {
-	CreateSession(*http.Request, *Session) error
-	VerifySession(r *http.Request, session *Session) (string, error)
+	CreateSession(context.Context, *Session) error
+	VerifySession(context.Context, *Session) (string, error)
 }
 
 type ServiceSession struct {
@@ -26,12 +26,12 @@ func NewService(repository Repository, secret string) *ServiceSession {
 	return &ServiceSession{repository: repository, secret: secret}
 }
 
-func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error {
-	pkgLogger.InfoWithRequestID(r, "request for session passed to service layer", logrus.Fields{})
+func (s *ServiceSession) CreateSession(ctx context.Context, session *Session) error {
+	pkgLogger.InfoWithRequestID(ctx, "request for session passed to service layer", logrus.Fields{})
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrGeneratingSessionID.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrGeneratingSessionID.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
 		return errors.Join(ErrGeneratingSessionID, err)
@@ -41,19 +41,19 @@ func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error 
 	session.SessionID = sessionID
 	session.SMSCode = smsCode
 
-	err = s.repository.CreateSession(r, session)
+	err = s.repository.CreateSession(ctx, session)
 	if err != nil {
 		return errors.Join(ErrCreatingSession, err)
 	}
 
 	smsErr := sms.SendFakeSMS(session.Phone, strconv.Itoa(session.SMSCode))
 	if smsErr != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrSendingSMS.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrSendingSMS.Error(), logrus.Fields{
 			"error": smsErr.Error(),
 		})
-		deleteErr := s.repository.DeleteSession(r, session)
+		deleteErr := s.repository.DeleteSession(ctx, session)
 		if deleteErr != nil {
-			pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+			pkgLogger.ErrorWithRequestID(ctx, ErrDeletingSession.Error(), logrus.Fields{
 				"error": deleteErr.Error(),
 			})
 		}
@@ -63,11 +63,11 @@ func (s *ServiceSession) CreateSession(r *http.Request, session *Session) error 
 	return nil
 }
 
-func (s *ServiceSession) VerifySession(r *http.Request, session *Session) (string, error) {
-	pkgLogger.InfoWithRequestID(r, "request for validation passed to service layer", logrus.Fields{})
+func (s *ServiceSession) VerifySession(ctx context.Context, session *Session) (string, error) {
+	pkgLogger.InfoWithRequestID(ctx, "request for validation passed to service layer", logrus.Fields{})
 
 	var requestedSession Session
-	if err := s.repository.GetSession(r, &requestedSession, session.SessionID); err != nil {
+	if err := s.repository.GetSession(ctx, &requestedSession, session.SessionID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", errors.Join(ErrSessionNotFound, err)
 		}
@@ -75,21 +75,21 @@ func (s *ServiceSession) VerifySession(r *http.Request, session *Session) (strin
 	}
 
 	if session.SMSCode != requestedSession.SMSCode {
-		pkgLogger.ErrorWithRequestID(r, ErrInvalidSMSCode.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrInvalidSMSCode.Error(), logrus.Fields{
 			"error": ErrInvalidSMSCode.Error(),
 		})
 		return "", ErrInvalidSMSCode
 	}
 
-	if err := s.repository.DeleteSession(r, &requestedSession); err != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+	if err := s.repository.DeleteSession(ctx, &requestedSession); err != nil {
+		pkgLogger.ErrorWithRequestID(ctx, ErrDeletingSession.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
 	}
 
 	jwtString, err := pkgJWT.Create(s.secret, requestedSession.Phone)
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrGeneratingToken.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrGeneratingToken.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
 		return "", errors.Join(ErrInternalError, ErrGeneratingToken)

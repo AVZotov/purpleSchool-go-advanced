@@ -22,16 +22,15 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		requestID := r.Header.Get(pkgHttp.RequestIDHeader)
+		ctx := r.Context()
 
-		pkgLogger.Logger.WithFields(logrus.Fields{
-			"request_id": requestID,
+		pkgLogger.InfoWithRequestID(ctx, "HTTP request received", logrus.Fields{
 			"method":     r.Method,
 			"path":       r.URL.Path,
 			"query":      r.URL.RawQuery,
 			"user_agent": r.UserAgent(),
 			"ip":         getClientIP(r),
-		}).Info("HTTP request received")
+		})
 
 		wrapper := &responseWriter{
 			ResponseWriter: w,
@@ -42,8 +41,7 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		pkgLogger.Logger.WithFields(logrus.Fields{
-			"request_id":     requestID,
+		pkgLogger.InfoWithRequestID(ctx, "HTTP request received", logrus.Fields{
 			"method":         r.Method,
 			"path":           r.URL.Path,
 			"status_code":    wrapper.statusCode,
@@ -51,7 +49,7 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			"user_agent":     r.UserAgent(),
 			"ip":             getClientIP(r),
 			"content_length": r.ContentLength,
-		}).Info("HTTP response sent")
+		})
 	})
 }
 

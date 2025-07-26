@@ -1,16 +1,16 @@
 package session
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
-	"net/http"
 	"order_api_auth/pkg/db"
 	pkgLogger "order_api_auth/pkg/logger"
 )
 
 type Repository interface {
-	CreateSession(*http.Request, *Session) error
-	GetSession(*http.Request, *Session, string) error
-	DeleteSession(*http.Request, *Session) error
+	CreateSession(context.Context, *Session) error
+	GetSession(context.Context, *Session, string) error
+	DeleteSession(context.Context, *Session) error
 }
 
 type RepositorySession struct {
@@ -23,10 +23,10 @@ func NewRepository(db *db.DB) *RepositorySession {
 	}
 }
 
-func (rep *RepositorySession) CreateSession(r *http.Request, session *Session) error {
+func (rep *RepositorySession) CreateSession(ctx context.Context, session *Session) error {
 	err := rep.db.Create(session)
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrCreatingSession.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrCreatingSession.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
 		return err
@@ -35,10 +35,10 @@ func (rep *RepositorySession) CreateSession(r *http.Request, session *Session) e
 	return nil
 }
 
-func (rep *RepositorySession) GetSession(r *http.Request, session *Session, sessionID string) error {
+func (rep *RepositorySession) GetSession(ctx context.Context, session *Session, sessionID string) error {
 
 	if err := rep.db.FindBy(session, "session_id = ?", sessionID); err != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrGettingSession.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrGettingSession.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
 
@@ -48,16 +48,16 @@ func (rep *RepositorySession) GetSession(r *http.Request, session *Session, sess
 	return nil
 }
 
-func (rep *RepositorySession) DeleteSession(r *http.Request, session *Session) error {
+func (rep *RepositorySession) DeleteSession(ctx context.Context, session *Session) error {
 	rowsAffected, err := rep.db.DeleteBy(&Session{}, "session_id = ?", session.SessionID)
 	if err != nil {
-		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrDeletingSession.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
 		return err
 	}
 	if rowsAffected == 0 {
-		pkgLogger.ErrorWithRequestID(r, ErrDeletingSession.Error(), logrus.Fields{
+		pkgLogger.ErrorWithRequestID(ctx, ErrDeletingSession.Error(), logrus.Fields{
 			"error": ErrSessionNotFound.Error(),
 		})
 		return ErrSessionNotFound

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -9,6 +10,12 @@ import (
 	pkgLogger "order_api_auth/pkg/logger"
 	"strings"
 	"time"
+)
+
+type contextKey string
+
+const (
+	RequestIdKey contextKey = "request_id"
 )
 
 func RequestIDMiddleware(next http.Handler) http.Handler {
@@ -27,11 +34,14 @@ func RequestIDMiddleware(next http.Handler) http.Handler {
 
 		w.Header().Set(pkgHttp.RequestIDHeader, requestID)
 
+		ctx := context.WithValue(r.Context(), RequestIdKey, requestID)
+
+		r = r.WithContext(ctx)
+
 		pkgLogger.Logger.WithFields(logrus.Fields{
 			"request_id": requestID,
 			"method":     r.Method,
 			"path":       r.URL.Path,
-			"type":       "request_id_set",
 		}).Debug("Request ID assigned")
 
 		next.ServeHTTP(w, r)

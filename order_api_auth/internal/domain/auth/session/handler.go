@@ -1,13 +1,11 @@
 package session
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"order_api_auth/internal/http/handlers/base"
-	pkgHeaders "order_api_auth/pkg/http"
 	pkgLogger "order_api_auth/pkg/logger"
 	pkgValidator "order_api_auth/pkg/validator"
 )
@@ -35,11 +33,10 @@ func (h *Handler) registerRoutes(mux *http.ServeMux) {
 }
 
 func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
-	ctx :=
-		pkgLogger.InfoWithRequestID(r, "request for session in handler", logrus.Fields{
-			"method": r.Method,
-			"url":    r.URL.String(),
-		})
+	pkgLogger.InfoWithRequestID(r.Context(), "request for session in handler", logrus.Fields{
+		"method": r.Method,
+		"url":    r.URL.String(),
+	})
 
 	var request SendCodeRequest
 
@@ -49,7 +46,7 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := pkgValidator.ValidateStruct(&request); err != nil {
-		pkgLogger.ErrorWithRequestID(r, "request validation failed", logrus.Fields{
+		pkgLogger.ErrorWithRequestID(r.Context(), "request validation failed", logrus.Fields{
 			"error": err.Error(),
 		})
 		h.WriteError(r, w, http.StatusBadRequest, err)
@@ -60,7 +57,7 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 		Phone: request.Phone,
 	}
 
-	if err := h.Service.CreateSession(r, &session); err != nil {
+	if err := h.Service.CreateSession(r.Context(), &session); err != nil {
 		h.WriteError(r, w, http.StatusInternalServerError, err)
 		return
 	}
@@ -68,7 +65,7 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 	response := ResponseWithSession{SessionID: session.SessionID}
 
 	if err := pkgValidator.ValidateStruct(&response); err != nil {
-		pkgLogger.ErrorWithRequestID(r, "response validation failed", logrus.Fields{
+		pkgLogger.ErrorWithRequestID(r.Context(), "response validation failed", logrus.Fields{
 			"error": err.Error(),
 		})
 		h.WriteError(r, w, http.StatusInternalServerError, err)
@@ -79,7 +76,7 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
-	pkgLogger.InfoWithRequestID(r, "request to verify session in handler", logrus.Fields{
+	pkgLogger.InfoWithRequestID(r.Context(), "request to verify session in handler", logrus.Fields{
 		"method": r.Method,
 		"url":    r.URL.String(),
 	})
@@ -92,7 +89,7 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := pkgValidator.ValidateStruct(&request); err != nil {
-		pkgLogger.ErrorWithRequestID(r, "request validation failed", logrus.Fields{
+		pkgLogger.ErrorWithRequestID(r.Context(), "request validation failed", logrus.Fields{
 			"error": err.Error(),
 		})
 		h.WriteError(r, w, http.StatusBadRequest, err)
@@ -104,7 +101,7 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 		SMSCode:   request.Code,
 	}
 
-	jwtString, err := h.Service.VerifySession(r, &session)
+	jwtString, err := h.Service.VerifySession(r.Context(), &session)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrSessionNotFound):
@@ -121,7 +118,7 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 
 	response := ResponseWithJWT{Token: jwtString}
 	if err = pkgValidator.ValidateStruct(&response); err != nil {
-		pkgLogger.ErrorWithRequestID(r, "response validation failed", logrus.Fields{
+		pkgLogger.ErrorWithRequestID(r.Context(), "response validation failed", logrus.Fields{
 			"error": err.Error(),
 		})
 		h.WriteError(r, w, http.StatusInternalServerError, err)
@@ -129,8 +126,4 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.WriteJSON(r, w, http.StatusOK, response)
-}
-
-func getRequestID(r *http.Request) string {
-	return r.Header.Get(pkgHeaders.RequestIDHeader)
 }

@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+type contextKey string
+
+const (
+	RequestIdKey contextKey = "request_id"
+)
+
+const (
+	RequestIdField = string(RequestIdKey)
+)
+
 var Logger *logrus.Logger
 
 func Init() {
@@ -18,14 +28,15 @@ func Init() {
 	Logger.SetOutput(os.Stdout)
 }
 
-func LogWithRequestID(ctx context.Context, level logrus.Level, message string, fields logrus.Fields) {
+func LogWithContext(ctx context.Context, level logrus.Level, message string, fields logrus.Fields) {
 	if fields == nil {
 		fields = logrus.Fields{}
 	}
 
-	requestID := ctx.Value("request_id")
-	if requestID != "" {
-		fields["request_id"] = requestID
+	if requestID := ctx.Value(RequestIdKey); requestID != nil {
+		if id, ok := requestID.(string); ok && id != "" {
+			fields[RequestIdField] = id
+		}
 	}
 
 	entry := Logger.WithFields(fields)
@@ -46,9 +57,9 @@ func LogWithRequestID(ctx context.Context, level logrus.Level, message string, f
 }
 
 func InfoWithRequestID(ctx context.Context, message string, fields logrus.Fields) {
-	LogWithRequestID(ctx, logrus.InfoLevel, message, fields)
+	LogWithContext(ctx, logrus.InfoLevel, message, fields)
 }
 
 func ErrorWithRequestID(ctx context.Context, message string, fields logrus.Fields) {
-	LogWithRequestID(ctx, logrus.ErrorLevel, message, fields)
+	LogWithContext(ctx, logrus.ErrorLevel, message, fields)
 }
