@@ -1,6 +1,7 @@
 package http
 
 const (
-	RequestIDHeader = "X-Request-ID"
-	RequestIPHeader = "X-Forwarded-For"
+	RequestIDHeader     = "X-Request-ID"
+	RequestIPHeader     = "X-Forwarded-For"
+	AuthorizationHeader = "Authorization"
 )

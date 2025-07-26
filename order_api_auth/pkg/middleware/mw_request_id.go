@@ -6,16 +6,11 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	pkgCtx "order_api_auth/pkg/context"
 	pkgHttp "order_api_auth/pkg/http"
 	pkgLogger "order_api_auth/pkg/logger"
 	"strings"
 	"time"
-)
-
-type contextKey string
-
-const (
-	RequestIdKey contextKey = "request_id"
 )
 
 func RequestIDMiddleware(next http.Handler) http.Handler {
@@ -34,7 +29,7 @@ func RequestIDMiddleware(next http.Handler) http.Handler {
 
 		w.Header().Set(pkgHttp.RequestIDHeader, requestID)
 
-		ctx := context.WithValue(r.Context(), RequestIdKey, requestID)
+		ctx := context.WithValue(r.Context(), pkgCtx.CtxRequestId, requestID)
 
 		r = r.WithContext(ctx)
 

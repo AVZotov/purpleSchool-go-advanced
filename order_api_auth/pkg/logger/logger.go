@@ -3,18 +3,14 @@ package logger
 import (
 	"context"
 	"github.com/sirupsen/logrus"
+	pkgCtx "order_api_auth/pkg/context"
 	"os"
 	"time"
 )
 
-type contextKey string
-
 const (
-	RequestIdKey contextKey = "request_id"
-)
-
-const (
-	RequestIdField = string(RequestIdKey)
+	RequestIdField = string(pkgCtx.CtxRequestId)
+	UserPhoneField = string(pkgCtx.CtxUserPhone)
 )
 
 var Logger *logrus.Logger
@@ -33,9 +29,15 @@ func LogWithContext(ctx context.Context, level logrus.Level, message string, fie
 		fields = logrus.Fields{}
 	}
 
-	if requestID := ctx.Value(RequestIdKey); requestID != nil {
+	if requestID := ctx.Value(pkgCtx.CtxRequestId); requestID != nil {
 		if id, ok := requestID.(string); ok && id != "" {
 			fields[RequestIdField] = id
+		}
+	}
+
+	if userPhone := ctx.Value(pkgCtx.CtxUserPhone); userPhone != nil {
+		if phone, ok := userPhone.(string); ok && phone != "" {
+			fields[UserPhoneField] = phone
 		}
 	}
 
