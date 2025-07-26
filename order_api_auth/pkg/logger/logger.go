@@ -1,9 +1,8 @@
 package logger
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	pkgHeaders "order_api_auth/pkg/http"
 	"os"
 	"time"
 )
@@ -19,12 +18,12 @@ func Init() {
 	Logger.SetOutput(os.Stdout)
 }
 
-func LogWithRequestID(r *http.Request, level logrus.Level, message string, fields logrus.Fields) {
+func LogWithRequestID(ctx context.Context, level logrus.Level, message string, fields logrus.Fields) {
 	if fields == nil {
 		fields = logrus.Fields{}
 	}
 
-	requestID := GetRequestID(r)
+	requestID := ctx.Value("request_id")
 	if requestID != "" {
 		fields["request_id"] = requestID
 	}
@@ -46,14 +45,10 @@ func LogWithRequestID(r *http.Request, level logrus.Level, message string, field
 	}
 }
 
-func InfoWithRequestID(r *http.Request, message string, fields logrus.Fields) {
-	LogWithRequestID(r, logrus.InfoLevel, message, fields)
+func InfoWithRequestID(ctx context.Context, message string, fields logrus.Fields) {
+	LogWithRequestID(ctx, logrus.InfoLevel, message, fields)
 }
 
-func ErrorWithRequestID(r *http.Request, message string, fields logrus.Fields) {
-	LogWithRequestID(r, logrus.ErrorLevel, message, fields)
-}
-
-func GetRequestID(r *http.Request) string {
-	return r.Header.Get(pkgHeaders.RequestIDHeader)
+func ErrorWithRequestID(ctx context.Context, message string, fields logrus.Fields) {
+	LogWithRequestID(ctx, logrus.ErrorLevel, message, fields)
 }

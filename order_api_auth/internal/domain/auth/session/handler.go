@@ -1,11 +1,13 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"order_api_auth/internal/http/handlers/base"
+	pkgHeaders "order_api_auth/pkg/http"
 	pkgLogger "order_api_auth/pkg/logger"
 	pkgValidator "order_api_auth/pkg/validator"
 )
@@ -33,10 +35,11 @@ func (h *Handler) registerRoutes(mux *http.ServeMux) {
 }
 
 func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
-	pkgLogger.InfoWithRequestID(r, "request for session in handler", logrus.Fields{
-		"method": r.Method,
-		"url":    r.URL.String(),
-	})
+	ctx :=
+		pkgLogger.InfoWithRequestID(r, "request for session in handler", logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+		})
 
 	var request SendCodeRequest
 
@@ -126,4 +129,8 @@ func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.WriteJSON(r, w, http.StatusOK, response)
+}
+
+func getRequestID(r *http.Request) string {
+	return r.Header.Get(pkgHeaders.RequestIDHeader)
 }
