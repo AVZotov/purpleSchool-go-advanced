@@ -7,4 +7,6 @@ var (
 	ErrInvalidSignature = errors.New("invalid signature")
 	ErrMissingClaims    = errors.New("missing required claims")
 	ErrInvalidAlgorithm = errors.New("invalid signing algorithm")
+
+	ErrMigrationFailed = errors.New("database migration failed")
 )
