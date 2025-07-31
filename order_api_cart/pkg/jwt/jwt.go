@@ -8,8 +8,11 @@ import (
 )
 
 func Create(secret, phone string) (string, error) {
-	if secret == "" || phone == "" {
-		return "", errors.New("secret and phone can not be empty")
+	if secret == "" {
+		return "", pkgErrors.ErrConfigInvalid
+	}
+	if phone == "" {
+		return "", pkgErrors.ErrPhoneRequired
 	}
 
 	jwtSecret := []byte(secret)
@@ -19,15 +22,18 @@ func Create(secret, phone string) (string, error) {
 
 	signedToken, err := token.SignedString(jwtSecret)
 	if err != nil {
-		return "", fmt.Errorf("failed to sign token: %w", err)
+		return "", fmt.Errorf("%w %v", pkgErrors.ErrCreatingToken, err)
 	}
 
 	return signedToken, nil
 }
 
 func ParseValidate(tokenString, secret string) (string, error) {
-	if tokenString == "" && secret == "" {
-		return "", pkgErrors.ErrInvalidToken
+	if tokenString == "" {
+		return "", pkgErrors.ErrMissingToken
+	}
+	if secret == "" {
+		return "", pkgErrors.ErrConfigInvalid
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -59,7 +65,7 @@ func ParseValidate(tokenString, secret string) (string, error) {
 
 	phone, ok := phoneInterface.(string)
 	if !ok || phone == "" {
-		return "", pkgErrors.ErrMissingClaims
+		return "", pkgErrors.ErrInvalidClaims
 	}
 
 	return phone, nil

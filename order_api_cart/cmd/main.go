@@ -56,4 +56,8 @@ func main() {
 		panic(err)
 	}
 	pkgLogger.Logger.Info("database migration initialized")
+
+	//TODO: CHAIN
+	//TODO: MUX
+	//TODO: Server
 }

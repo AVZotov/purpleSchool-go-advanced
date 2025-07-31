@@ -54,6 +54,15 @@ func (db *DB) FindBy(model any, conditions ...any) error {
 	return nil
 }
 
+func (db *DB) FindByOrCrate(model any, conditions ...any) error {
+	result := db.DB.Where(conditions[0], conditions[1:]...).FirstOrCreate(model)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
 func (db *DB) DeleteBy(model any, conditions ...any) (int64, error) {
 	result := db.DB.Delete(model, conditions...)
 	if result.Error != nil {

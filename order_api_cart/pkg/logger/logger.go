@@ -3,14 +3,14 @@ package logger
 import (
 	"context"
 	"github.com/sirupsen/logrus"
-	pkgTp "order_api_cart/pkg/types"
+	pkgCtx "order_api_cart/pkg/context"
 	"os"
 	"time"
 )
 
 const (
-	RequestIdField = string(pkgTp.CtxRequestId)
-	UserPhoneField = string(pkgTp.CtxUserPhone)
+	RequestIdField = string(pkgCtx.CtxRequestId)
+	UserPhoneField = string(pkgCtx.CtxUserPhone)
 )
 
 var Logger *logrus.Logger
@@ -29,13 +29,13 @@ func LogWithContext(ctx context.Context, level logrus.Level, message string, fie
 		fields = logrus.Fields{}
 	}
 
-	if requestID := ctx.Value(pkgTp.CtxRequestId); requestID != nil {
+	if requestID := ctx.Value(pkgCtx.CtxRequestId); requestID != nil {
 		if id, ok := requestID.(string); ok && id != "" {
 			fields[RequestIdField] = id
 		}
 	}
 
-	if userPhone := ctx.Value(pkgTp.CtxUserPhone); userPhone != nil {
+	if userPhone := ctx.Value(pkgCtx.CtxUserPhone); userPhone != nil {
 		if phone, ok := userPhone.(string); ok && phone != "" {
 			fields[UserPhoneField] = phone
 		}

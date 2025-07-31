@@ -16,6 +16,7 @@ func RunMigrations(db *gorm.DB) error {
 		pkgModels.User{},
 		pkgModels.Order{},
 		pkgModels.Product{},
+		pkgModels.Session{},
 	}
 
 	if err := db.AutoMigrate(models...); err != nil {

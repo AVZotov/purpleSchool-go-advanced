@@ -4,18 +4,25 @@ import "gorm.io/gorm"
 
 type User struct {
 	gorm.Model
-	Phone  string  `gorm:"unique;not null;index" json:"phone"`
-	Orders []Order `json:"orders"`
+	Phone  string `gorm:"unique;not null;index"`
+	Orders []Order
 }
 type Order struct {
 	gorm.Model
-	UserID   uint      `gorm:"index;not null" json:"user_id"`
-	User     User      `gorm:"foreignKey:UserID" json:"user"`
-	Products []Product `gorm:"many2many:order_products;" json:"products"`
+	UserID   uint      `gorm:"index;not null"`
+	User     User      `gorm:"foreignKey:UserID"`
+	Products []Product `gorm:"many2many:order_products;"`
 }
 
 type Product struct {
 	gorm.Model
-	Name   string  `gorm:"not null;index" json:"name"`
-	Orders []Order `gorm:"many2many:order_products;" json:"orders"`
+	Name   string  `gorm:"not null;index"`
+	Orders []Order `gorm:"many2many:order_products;"`
+}
+
+type Session struct {
+	gorm.Model
+	Phone     string `gorm:"index"`
+	SessionID string `gorm:"uniqueIndex;size:64"`
+	SMSCode   int    `gorm:""`
 }
