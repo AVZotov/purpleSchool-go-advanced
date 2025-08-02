@@ -1,12 +1,13 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"order_api_cart/internal/domain/base"
 	r "order_api_cart/internal/domain/routes"
-	pkgErs "order_api_cart/pkg/errors"
+	pkgErr "order_api_cart/pkg/errors"
 	pkgLgr "order_api_cart/pkg/logger"
 	pkgVlr "order_api_cart/pkg/validator"
 )
@@ -35,18 +36,20 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 		"url":    r.URL.String(),
 	})
 
-	var request SendCodeRequest
+	ctx := r.Context()
 
-	if err := h.ParseJSON(r.Context(), r, &request); err != nil {
-		h.WriteError(r.Context(), w, http.StatusBadRequest, err)
+	var request RequestForSession
+
+	if err := h.ParseJSON(ctx, r, &request); err != nil {
+		h.WriteError(ctx, w, pkgErr.GetStatusCode(pkgErr.ErrInvalidRequest), pkgErr.ErrInvalidRequest)
 		return
 	}
 
 	if err := pkgVlr.ValidateStruct(&request); err != nil {
-		pkgLgr.ErrorWithRequestID(r.Context(), pkgErs.ErrValidation.Error(), logrus.Fields{
+		pkgLgr.ErrorWithRequestID(ctx, pkgErr.ErrValidation.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
-		h.WriteError(r.Context(), w, http.StatusBadRequest, pkgErs.ErrValidation)
+		h.WriteError(r.Context(), w, pkgErr.GetStatusCode(pkgErr.ErrValidation), pkgErr.ErrValidation)
 		return
 	}
 
@@ -55,17 +58,17 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.Service.CreateSession(r.Context(), &session); err != nil {
-		h.WriteError(r.Context(), w, http.StatusInternalServerError, err)
+		h.WriteError(r.Context(), w, pkgErr.GetStatusCode(err), err)
 		return
 	}
 
-	response := ResponseWithSession{SessionID: session.SessionID}
+	response := ResponseWithSessionID{SessionID: session.SessionID}
 
 	if err := pkgVlr.ValidateStruct(&response); err != nil {
-		pkgLgr.ErrorWithRequestID(r.Context(), pkgErs.ErrValidation.Error(), logrus.Fields{
+		pkgLgr.ErrorWithRequestID(r.Context(), pkgErr.ErrValidation.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
-		h.WriteError(r.Context(), w, http.StatusInternalServerError, pkgErs.ErrValidation)
+		h.WriteError(r.Context(), w, http.StatusInternalServerError, pkgErr.ErrValidation)
 		return
 	}
 
@@ -73,5 +76,53 @@ func (h *Handler) sendSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) verifySession(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	pkgLgr.InfoWithRequestID(ctx, "verification request in handler", logrus.Fields{
+		"method": r.Method,
+		"url":    r.URL.String(),
+	})
 
+	var request RequestForVerification
+
+	if err := h.ParseJSON(ctx, r, &request); err != nil {
+		h.WriteError(ctx, w, pkgErr.GetStatusCode(pkgErr.ErrInvalidRequest), pkgErr.ErrInvalidRequest)
+		return
+	}
+
+	if err := pkgVlr.ValidateStruct(&request); err != nil {
+		pkgLgr.ErrorWithRequestID(ctx, pkgErr.ErrValidation.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+		h.WriteError(r.Context(), w, pkgErr.GetStatusCode(pkgErr.ErrValidation), pkgErr.ErrValidation)
+		return
+	}
+
+	session := Session{
+		SessionID: request.SessionID,
+		SMSCode:   request.Code,
+	}
+	jwtString, err := h.Service.VerifySession(r.Context(), &session)
+	if err != nil {
+		switch {
+		case errors.Is(err, pkgErr.ErrRecordNotFound):
+			h.WriteError(ctx, w, http.StatusNotFound, err)
+		case errors.Is(err, pkgErr.ErrInvalidRequest):
+			h.WriteError(ctx, w, http.StatusBadRequest, err)
+		case errors.Is(err, pkgErr.ErrValidation):
+			h.WriteError(ctx, w, http.StatusBadRequest, err)
+		default:
+			h.WriteError(ctx, w, http.StatusInternalServerError, err)
+		}
+		return
+	}
+	response := ResponseWithJWT{Token: jwtString}
+	if err = pkgVlr.ValidateStruct(&response); err != nil {
+		pkgLgr.ErrorWithRequestID(r.Context(), pkgErr.ErrValidation.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+		h.WriteError(ctx, w, http.StatusInternalServerError, err)
+		return
+	}
+
+	h.WriteJSON(ctx, w, http.StatusOK, response)
 }

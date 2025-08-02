@@ -29,8 +29,8 @@ var (
 // =============================================================================
 
 var (
-	ErrDatabaseConnection = errors.New("database connection failed")
-	ErrDatabaseTimeout    = errors.New("database operation timeout")
+	ErrDatabaseConnection  = errors.New("database connection failed")
+	ErrDatabaseHealthcheck = errors.New("database healthcheck failed")
 
 	ErrMigrationFailed = errors.New("database migration failed")
 
@@ -52,12 +52,9 @@ var (
 	ErrInvalidInput = errors.New("invalid input data")
 
 	ErrInvalidPhone  = errors.New("invalid phone number")
-	ErrPhoneFormat   = errors.New("phone number format invalid")
 	ErrPhoneRequired = errors.New("phone number required")
 
-	ErrInvalidFormat     = errors.New("invalid data format")
-	ErrInvalidLength     = errors.New("invalid data length")
-	ErrInvalidCharacters = errors.New("invalid characters")
+	ErrInvalidFormat = errors.New("invalid data format")
 )
 
 // =============================================================================
@@ -69,9 +66,7 @@ var (
 	ErrDecodingJSON = errors.New("decoding JSON failed")
 
 	ErrInvalidRequest = errors.New("invalid HTTP request")
-	ErrMissingHeader  = errors.New("missing required header")
 
-	ErrResponseFailed  = errors.New("HTTP response failed")
 	ErrInvalidResponse = errors.New("invalid response format")
 )
 
@@ -97,6 +92,10 @@ var (
 	ErrCreatingToken = errors.New("token creation failed")
 
 	ErrGeneratingSessionID = errors.New("sessionID generation failed")
+
+	ErrConvertingToModel = errors.New("converting to db model failed")
+
+	ErrSendingSMS = errors.New("sending sms code failed")
 )
 
 // =============================================================================
@@ -104,9 +103,8 @@ var (
 // =============================================================================
 
 var (
-	ErrConfigMissing      = errors.New("configuration missing")
-	ErrConfigInvalid      = errors.New("configuration invalid")
-	ErrEnvironmentInvalid = errors.New("invalid environment")
+	ErrConfigMissing = errors.New("configuration missing")
+	ErrConfigInvalid = errors.New("configuration invalid")
 )
 
 func IsAuthenticationError(err error) bool {
@@ -128,8 +126,8 @@ func IsAuthenticationError(err error) bool {
 func IsValidationError(err error) bool {
 	validationErrors := []error{
 		ErrValidation, ErrInvalidInput,
-		ErrInvalidPhone, ErrPhoneFormat, ErrPhoneRequired,
-		ErrInvalidFormat, ErrInvalidLength, ErrInvalidCharacters,
+		ErrInvalidPhone, ErrPhoneRequired,
+		ErrInvalidFormat,
 	}
 
 	for _, valErr := range validationErrors {
@@ -140,7 +138,7 @@ func IsValidationError(err error) bool {
 	return false
 }
 
-func GetHTTPStatusCode(err error) int {
+func GetStatusCode(err error) int {
 	switch {
 	// 400 Bad Request
 	case IsValidationError(err):

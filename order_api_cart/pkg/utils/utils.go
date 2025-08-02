@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/jinzhu/copier"
 	pkgErrors "order_api_cart/pkg/errors"
 )
 
@@ -17,4 +18,12 @@ func GenerateSessionID() (string, error) {
 
 func GetFakeCode() int {
 	return 3245
+}
+
+func ConvertToModel(dest, src interface{}) error {
+	err := copier.Copy(dest, src)
+	if err != nil {
+		return err
+	}
+	return nil
 }

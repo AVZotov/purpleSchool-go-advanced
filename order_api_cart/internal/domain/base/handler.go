@@ -3,6 +3,7 @@ package base
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -25,7 +26,7 @@ func (h *Handler) WriteJSON(ctx context.Context, w http.ResponseWriter, status i
 		pkgLogger.ErrorWithRequestID(ctx, pkgErrors.ErrEncodingJSON.Error(), logrus.Fields{
 			"error": err.Error(),
 		})
-		http.Error(w, pkgErrors.ErrEncodingJSON.Error(), http.StatusInternalServerError)
+		h.WriteError(ctx, w, http.StatusInternalServerError, errors.Join(pkgErrors.ErrEncodingJSON, err))
 		return
 	}
 }

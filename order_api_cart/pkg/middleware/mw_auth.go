@@ -26,7 +26,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 
 			token, err := extractBearerToken(r)
 			if err != nil {
-				errCode := pkgErr.GetHTTPStatusCode(err)
+				errCode := pkgErr.GetStatusCode(err)
 				errMessage := http.StatusText(errCode)
 				pkgLogger.ErrorWithRequestID(ctx, errMessage, logrus.Fields{
 					"error": err.Error(),
@@ -74,7 +74,7 @@ func extractBearerToken(r *http.Request) (string, error) {
 }
 
 func handleJWTError(ctx context.Context, w http.ResponseWriter, err error) {
-	errCode := pkgErr.GetHTTPStatusCode(err)
+	errCode := pkgErr.GetStatusCode(err)
 	switch {
 	case pkgErr.IsAuthenticationError(err):
 		pkgLogger.ErrorWithRequestID(ctx, "authentication error", logrus.Fields{"error": err.Error()})
