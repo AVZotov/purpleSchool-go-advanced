@@ -58,16 +58,16 @@ func extractBearerToken(r *http.Request) (string, error) {
 
 	authHeader := r.Header.Get(pkgHdr.AuthorizationHeader)
 	if authHeader == "" {
-		return "", pkgErr.ErrMissingAuthHeader
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	if !strings.HasPrefix(authHeader, BearerPrefix) {
-		return "", pkgErr.ErrMissingAuthHeader
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	token := strings.TrimPrefix(authHeader, BearerPrefix)
 	if token == "" {
-		return "", pkgErr.ErrMissingToken
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	return token, nil
@@ -75,15 +75,8 @@ func extractBearerToken(r *http.Request) (string, error) {
 
 func handleJWTError(ctx context.Context, w http.ResponseWriter, err error) {
 	errCode := pkgErr.GetStatusCode(err)
-	switch {
-	case pkgErr.IsAuthenticationError(err):
-		pkgLogger.ErrorWithRequestID(ctx, "authentication error", logrus.Fields{"error": err.Error()})
-		writeAuthError(w, errCode, http.StatusText(errCode))
-	default:
-		pkgLogger.ErrorWithRequestID(ctx, "Token validation failed", logrus.Fields{"error": err.Error()})
-		writeAuthError(w, http.StatusInternalServerError,
-			http.StatusText(http.StatusInternalServerError))
-	}
+	pkgLogger.ErrorWithRequestID(ctx, http.StatusText(errCode), logrus.Fields{"error": err.Error()})
+	writeAuthError(w, errCode, http.StatusText(errCode))
 }
 
 func writeAuthError(w http.ResponseWriter, code int, message string) {

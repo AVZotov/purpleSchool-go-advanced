@@ -2,173 +2,91 @@ package errors
 
 import "errors"
 
-// =============================================================================
-// AUTHENTICATION & AUTHORIZATION ERRORS - Token, Signature, Claims, Session, SMS/Code errors
-// =============================================================================
-
+// Authentication errors
 var (
-	ErrMissingAuthHeader = errors.New("missing authentication header")
-
-	ErrInvalidToken = errors.New("invalid token")
-	ErrMissingToken = errors.New("token missing")
-
-	ErrInvalidSignature = errors.New("invalid signature")
-	ErrInvalidAlgorithm = errors.New("invalid signing algorithm")
-
-	ErrMissingClaims = errors.New("missing required claims")
-	ErrInvalidClaims = errors.New("invalid claims format")
-
-	ErrInvalidSession  = errors.New("invalid session")
+	ErrInvalidAuth     = errors.New("authentication failed")
 	ErrSessionNotFound = errors.New("session not found")
-
-	ErrInvalidCode = errors.New("invalid verification code")
+	ErrInvalidCode     = errors.New("invalid verification code")
 )
 
-// =============================================================================
-// DATABASE ERRORS - Connection, Migration, Query, Constraint errors
-// =============================================================================
-
+// Database errors
 var (
-	ErrDatabaseConnection  = errors.New("database connection failed")
-	ErrDatabaseHealthcheck = errors.New("database healthcheck failed")
-
-	ErrMigrationFailed = errors.New("database migration failed")
-
 	ErrRecordNotFound    = errors.New("record not found")
 	ErrRecordExists      = errors.New("record already exists")
 	ErrQueryFailed       = errors.New("database query failed")
 	ErrTransactionFailed = errors.New("database transaction failed")
-
-	ErrUniqueViolation     = errors.New("unique constraint violation")
-	ErrForeignKeyViolation = errors.New("foreign key constraint violation")
 )
 
-// =============================================================================
-// VALIDATION ERRORS - General & Phone validation and General format errors
-// =============================================================================
-
+// Validation errors
 var (
 	ErrValidation   = errors.New("validation failed")
 	ErrInvalidInput = errors.New("invalid input data")
-
-	ErrInvalidPhone  = errors.New("invalid phone number")
-	ErrPhoneRequired = errors.New("phone number required")
-
-	ErrInvalidFormat = errors.New("invalid data format")
+	ErrInvalidPhone = errors.New("invalid phone number")
 )
 
-// =============================================================================
-// HTTP & JSON ERRORS - JSON processing, HTTP request and response errors
-// =============================================================================
-
+// HTTP base errors
 var (
-	ErrEncodingJSON = errors.New("encoding JSON failed")
-	ErrDecodingJSON = errors.New("decoding JSON failed")
-
-	ErrInvalidRequest = errors.New("invalid HTTP request")
-
-	ErrInvalidResponse = errors.New("invalid response format")
+	ErrInvalidRequest = errors.New("invalid request")
+	ErrEncodingJSON   = errors.New("json encoding failed")
+	ErrDecodingJSON   = errors.New("json decoding failed")
 )
 
-// =============================================================================
-// BUSINESS LOGIC ERRORS (DOMAIN SPECIFIC) - User, Order, Product errors
-// =============================================================================
-
+// Business logic errors
 var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrUserExists   = errors.New("user already exists")
-
-	ErrOrderNotFound = errors.New("order not found")
-	ErrOrderAccess   = errors.New("access denied to order")
-
+	ErrUserNotFound    = errors.New("user not found")
+	ErrUserExists      = errors.New("user already exists")
+	ErrOrderNotFound   = errors.New("order not found")
+	ErrOrderAccess     = errors.New("access denied to order")
 	ErrProductNotFound = errors.New("product not found")
 )
 
-// =============================================================================
-// EXTERNAL SERVICE ERRORS - JWT, SessionID
-// =============================================================================
-
+// System errors
 var (
-	ErrCreatingToken = errors.New("token creation failed")
-
-	ErrGeneratingSessionID = errors.New("sessionID generation failed")
-
-	ErrConvertingToModel = errors.New("converting to db model failed")
-
-	ErrSendingSMS = errors.New("sending sms code failed")
+	ErrConfigMissing      = errors.New("configuration missing")
+	ErrServiceUnavailable = errors.New("external service unavailable")
 )
 
-// =============================================================================
-// SYSTEM & INFRASTRUCTURE ERRORS - Configuration
-// =============================================================================
+func IsAuthError(err error) bool {
+	return errors.Is(err, ErrInvalidAuth) ||
+		errors.Is(err, ErrSessionNotFound) ||
+		errors.Is(err, ErrInvalidCode)
+}
 
-var (
-	ErrConfigMissing = errors.New("configuration missing")
-	ErrConfigInvalid = errors.New("configuration invalid")
-)
-
-func IsAuthenticationError(err error) bool {
-	authErrors := []error{
-		ErrInvalidToken, ErrMissingToken, ErrSessionNotFound,
-		ErrInvalidSignature, ErrInvalidAlgorithm,
-		ErrMissingClaims, ErrInvalidClaims, ErrMissingAuthHeader,
-		ErrInvalidSession, ErrInvalidCode,
-	}
-
-	for _, authErr := range authErrors {
-		if errors.Is(err, authErr) {
-			return true
-		}
-	}
-	return false
+func IsNotFoundError(err error) bool {
+	return errors.Is(err, ErrRecordNotFound) ||
+		errors.Is(err, ErrUserNotFound) ||
+		errors.Is(err, ErrOrderNotFound) ||
+		errors.Is(err, ErrProductNotFound)
 }
 
 func IsValidationError(err error) bool {
-	validationErrors := []error{
-		ErrValidation, ErrInvalidInput,
-		ErrInvalidPhone, ErrPhoneRequired,
-		ErrInvalidFormat,
-	}
-
-	for _, valErr := range validationErrors {
-		if errors.Is(err, valErr) {
-			return true
-		}
-	}
-	return false
+	return errors.Is(err, ErrValidation) ||
+		errors.Is(err, ErrInvalidInput) ||
+		errors.Is(err, ErrInvalidPhone)
 }
 
+func IsConflictError(err error) bool {
+	return errors.Is(err, ErrRecordExists) ||
+		errors.Is(err, ErrUserExists)
+}
+
+// GetStatusCode is a function returning error code mapped to appErrors
 func GetStatusCode(err error) int {
 	switch {
-	// 400 Bad Request
 	case IsValidationError(err):
 		return 400
 	case errors.Is(err, ErrInvalidRequest):
 		return 400
-
-	// 401 Unauthorized
-	case IsAuthenticationError(err):
+	case IsAuthError(err):
 		return 401
-
-	// 403 Forbidden
 	case errors.Is(err, ErrOrderAccess):
 		return 403
-
-	// 404 Not Found
-	case errors.Is(err, ErrRecordNotFound):
+	case IsNotFoundError(err):
 		return 404
-	case errors.Is(err, ErrUserNotFound):
-		return 404
-	case errors.Is(err, ErrOrderNotFound):
-		return 404
-
-	// 409 Conflict
-	case errors.Is(err, ErrUserExists):
+	case IsConflictError(err):
 		return 409
-	case errors.Is(err, ErrUniqueViolation):
-		return 409
-
-	// 500 Internal Server Error
+	case errors.Is(err, ErrServiceUnavailable):
+		return 503
 	default:
 		return 500
 	}

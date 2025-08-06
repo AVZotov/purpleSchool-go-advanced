@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"order_api_cart/pkg/db/models"
@@ -21,11 +22,11 @@ type Service interface {
 }
 
 type ServiceAuth struct {
-	repository RepositoryAuth
+	repository *RepositoryAuth
 	secret     string
 }
 
-func NewService(repository RepositoryAuth, secret string) *ServiceAuth {
+func NewService(repository *RepositoryAuth, secret string) *ServiceAuth {
 	return &ServiceAuth{repository: repository, secret: secret}
 }
 
@@ -34,10 +35,7 @@ func (s *ServiceAuth) CreateSession(ctx context.Context, session *Session) error
 
 	sessionID, err := utils.GenerateSessionID()
 	if err != nil {
-		pkgLog.ErrorWithRequestID(ctx, pkgErr.ErrGeneratingSessionID.Error(), logrus.Fields{
-			"error": err.Error(),
-		})
-		return pkgErr.ErrGeneratingSessionID
+		return fmt.Errorf("session creation failed: %w", err)
 	}
 
 	smsCode := utils.GetFakeCode()
@@ -45,36 +43,21 @@ func (s *ServiceAuth) CreateSession(ctx context.Context, session *Session) error
 	session.SMSCode = smsCode
 
 	if err = pkgValidator.ValidateStruct(session); err != nil {
-		pkgLog.ErrorWithRequestID(ctx, pkgErr.ErrInvalidInput.Error(), logrus.Fields{
-			"error": err.Error(),
-		})
-		return pkgErr.ErrInvalidInput
+		return fmt.Errorf("validation failed: %w", pkgErr.ErrValidation)
 	}
 
 	var model models.Session
-	if err = utils.ConvertToModel(model, session); err != nil {
-		pkgLog.ErrorWithRequestID(ctx, pkgErr.ErrConvertingToModel.Error(), logrus.Fields{
-			"error": err.Error(),
-		})
-		return pkgErr.ErrConvertingToModel
+	if err = utils.ConvertToModel(&model, session); err != nil {
+		return fmt.Errorf("model conversion failed: %w", err)
 	}
 
 	if err = s.repository.CreateSession(ctx, &model); err != nil {
-		return errors.Join(pkgErr.ErrTransactionFailed, err)
+		return fmt.Errorf("database operation failed: %w", err)
 	}
 
-	smsErr := sms.SendFakeSMS(session.Phone, strconv.Itoa(session.SMSCode))
-	if smsErr != nil {
-		pkgLog.ErrorWithRequestID(ctx, pkgErr.ErrSendingSMS.Error(), logrus.Fields{
-			"error": smsErr.Error(),
-		})
-		deleteErr := s.repository.DeleteSession(ctx, &model)
-		if deleteErr != nil {
-			pkgLog.ErrorWithRequestID(ctx, deleteErr.Error(), logrus.Fields{
-				"error": deleteErr.Error(),
-			})
-		}
-		return errors.Join(pkgErr.ErrSendingSMS, smsErr, deleteErr)
+	if err = sms.SendFakeSMS(session.Phone, strconv.Itoa(session.SMSCode)); err != nil {
+		_ = s.repository.DeleteSession(ctx, &model)
+		return fmt.Errorf("notification service failed: %w", pkgErr.ErrServiceUnavailable)
 	}
 
 	return nil
@@ -106,10 +89,7 @@ func (s *ServiceAuth) VerifySession(ctx context.Context, session *Session) (stri
 
 	jwtString, err := pkgJWT.Create(s.secret, requestedSession.Phone)
 	if err != nil {
-		pkgLog.ErrorWithRequestID(ctx, pkgErr.ErrCreatingToken.Error(), logrus.Fields{
-			"error": err.Error(),
-		})
-		return "", pkgErr.ErrCreatingToken
+		return "", pkgErr.ErrServiceUnavailable
 	}
 
 	return jwtString, nil

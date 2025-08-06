@@ -24,8 +24,8 @@ func New(dsn string) (*DB, error) {
 	if err != nil {
 		pkgLogger.Logger.WithFields(logrus.Fields{
 			"error": err.Error(),
-		}).Error(pkgErr.ErrDatabaseConnection.Error())
-		return nil, fmt.Errorf("%w %v", pkgErr.ErrDatabaseConnection, err)
+		}).Error(pkgErr.ErrServiceUnavailable.Error())
+		return nil, fmt.Errorf("%w %v", pkgErr.ErrServiceUnavailable, err)
 	}
 
 	dbStruct := &DB{
@@ -36,8 +36,8 @@ func New(dsn string) (*DB, error) {
 	if err = dbStruct.healthCheck(); err != nil {
 		pkgLogger.Logger.WithFields(logrus.Fields{
 			"error": err.Error(),
-		}).Error(pkgErr.ErrDatabaseHealthcheck.Error())
-		return nil, fmt.Errorf("%w %v", pkgErr.ErrDatabaseHealthcheck, err)
+		}).Error(pkgErr.ErrServiceUnavailable.Error())
+		return nil, fmt.Errorf("%w %v", pkgErr.ErrServiceUnavailable, err)
 	}
 
 	return dbStruct, nil

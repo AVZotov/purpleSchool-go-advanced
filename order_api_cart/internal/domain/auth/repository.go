@@ -12,7 +12,11 @@ import (
 )
 
 type RepositoryAuth struct {
-	DB db.DB
+	DB *db.DB
+}
+
+func NewRepository(DB *db.DB) *RepositoryAuth {
+	return &RepositoryAuth{DB: DB}
 }
 
 func (repo *RepositoryAuth) CreateSession(ctx context.Context, session *models.Session) error {
@@ -20,7 +24,7 @@ func (repo *RepositoryAuth) CreateSession(ctx context.Context, session *models.S
 		var existing models.Session
 		err := tx.Where("session_id = ?", session.SessionID).First(&existing).Error
 		if err == nil {
-			pkgLogger.ErrorWithRequestID(ctx, pkgErr.ErrRecordExists.Error(), logrus.Fields{
+			pkgLogger.ErrorWithRequestID(ctx, "can't create session, record already exists", logrus.Fields{
 				"error": err.Error(),
 			})
 
@@ -34,7 +38,11 @@ func (repo *RepositoryAuth) CreateSession(ctx context.Context, session *models.S
 			return pkgErr.ErrQueryFailed
 		}
 
-		return tx.Create(session).Error
+		if err = tx.Create(session).Error; err != nil {
+			return pkgErr.ErrTransactionFailed
+		}
+
+		return nil
 	})
 }
 

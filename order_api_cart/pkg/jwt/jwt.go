@@ -1,18 +1,17 @@
 package jwt
 
 import (
-	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	pkgErrors "order_api_cart/pkg/errors"
+	pkgErr "order_api_cart/pkg/errors"
 )
 
 func Create(secret, phone string) (string, error) {
 	if secret == "" {
-		return "", pkgErrors.ErrConfigInvalid
+		return "", pkgErr.ErrConfigMissing
 	}
 	if phone == "" {
-		return "", pkgErrors.ErrPhoneRequired
+		return "", pkgErr.ErrInvalidPhone
 	}
 
 	jwtSecret := []byte(secret)
@@ -22,50 +21,44 @@ func Create(secret, phone string) (string, error) {
 
 	signedToken, err := token.SignedString(jwtSecret)
 	if err != nil {
-		return "", fmt.Errorf("%w %v", pkgErrors.ErrCreatingToken, err)
+		return "", fmt.Errorf("%w %v", pkgErr.ErrServiceUnavailable)
 	}
 
 	return signedToken, nil
 }
 
 func ParseValidate(tokenString, secret string) (string, error) {
-	if tokenString == "" {
-		return "", pkgErrors.ErrMissingToken
-	}
-	if secret == "" {
-		return "", pkgErrors.ErrConfigInvalid
+	if tokenString == "" || secret == "" {
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("%w %v", pkgErrors.ErrInvalidAlgorithm, token.Header["alg"])
+			return nil, pkgErr.ErrInvalidAuth
 		}
 		return []byte(secret), nil
 	})
 	if err != nil {
-		if errors.Is(err, jwt.ErrSignatureInvalid) {
-			return "", pkgErrors.ErrInvalidSignature
-		}
-		return "", fmt.Errorf("%w: %v", pkgErrors.ErrInvalidToken, err)
+		return "", fmt.Errorf("token validation failed: %w", pkgErr.ErrInvalidAuth)
 	}
 
 	if !token.Valid {
-		return "", pkgErrors.ErrInvalidToken
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", pkgErrors.ErrMissingClaims
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	phoneInterface, exists := claims["phone"]
 	if !exists {
-		return "", pkgErrors.ErrMissingClaims
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	phone, ok := phoneInterface.(string)
 	if !ok || phone == "" {
-		return "", pkgErrors.ErrInvalidClaims
+		return "", pkgErr.ErrInvalidAuth
 	}
 
 	return phone, nil
