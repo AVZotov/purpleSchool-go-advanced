@@ -1,6 +1,19 @@
 package order
 
 type NewOrderRequest struct {
-	ProductIDs []int  `json:"product_ids" validate:"required"`
-	Phone      string `json:"phone,omitempty" validate:"required"`
+	ProductIDs []uint `json:"product_ids" validate:"required,min=1,dive,required,min=1"`
+}
+
+type NewOrderResponse struct {
+	ID         uint             `json:"id"`
+	Phone      string           `json:"phone"`
+	Status     string           `json:"status"`
+	CreateAt   string           `json:"create_at"`
+	Ordered    []ProductInOrder `json:"products"`
+	TotalItems uint             `json:"total_items"`
+}
+
+type ProductInOrder struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
 }

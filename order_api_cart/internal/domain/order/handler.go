@@ -1,15 +1,12 @@
 package order
 
 import (
+	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
-	"order/pkg/validator"
 	"order_api_cart/internal/domain/base"
 	r "order_api_cart/internal/domain/routes"
-	pkgCtx "order_api_cart/pkg/context"
 	pkgErr "order_api_cart/pkg/errors"
-	pkgLog "order_api_cart/pkg/logger"
 	mw "order_api_cart/pkg/middleware"
 	pkgValidator "order_api_cart/pkg/validator"
 )
@@ -46,28 +43,24 @@ func (h *Handler) registerRoutes(mux *http.ServeMux) {
 func (h *Handler) new(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	phoneInterface := ctx.Value(pkgCtx.CtxUserPhone)
-	phone, ok := phoneInterface.(string)
-	if !ok {
-		h.WriteError(ctx, w, http.StatusBadRequest, pkgErr.ErrInvalidPhone)
-		return
-	}
-
 	var req NewOrderRequest
 	if err := h.ParseJSON(ctx, r, &req); err != nil {
 		h.WriteError(ctx, w, http.StatusBadRequest, pkgErr.ErrDecodingJSON)
 		return
 	}
-	req.Phone = phone
 
 	if err := pkgValidator.ValidateStruct(&req); err != nil {
 		h.WriteError(ctx, w, http.StatusInternalServerError, pkgErr.ErrValidation)
 	}
 
-	if err := h.Service.createOrder(ctx, &req); err != nil {
-		h.WriteError(ctx, w, http.StatusInternalServerError, nil)
+	response, err := h.Service.createOrder(ctx, &req)
+	if err != nil {
+		code := pkgErr.GetStatusCode(err)
+		h.WriteError(ctx, w, code, errors.New(http.StatusText(code)))
 		return
 	}
+
+	h.WriteJSON(ctx, w, http.StatusCreated, response)
 }
 
 func (h *Handler) getOrderByID(w http.ResponseWriter, r *http.Request) {
