@@ -47,7 +47,7 @@ func (repo *RepositoryAuth) CreateSession(ctx context.Context, session *models.S
 }
 
 func (repo *RepositoryAuth) DeleteSession(ctx context.Context, session *models.Session) error {
-	rowsAffected, err := repo.DB.DeleteBy(&Session{}, "session_id = ?", session.SessionID)
+	rowsAffected, err := repo.DB.DeleteBy(&models.Session{}, "session_id = ?", session.SessionID)
 	if err != nil {
 		pkgLogger.ErrorWithRequestID(ctx, pkgErr.ErrQueryFailed.Error(), logrus.Fields{
 			"error": err.Error(),

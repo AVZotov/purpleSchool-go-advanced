@@ -32,6 +32,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 					"error": err.Error(),
 				})
 				writeAuthError(w, errCode, errMessage)
+				return
 			}
 
 			phone, err := pkgJWT.ParseValidate(token, jwtSecret)

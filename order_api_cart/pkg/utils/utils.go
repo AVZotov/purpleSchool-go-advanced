@@ -5,13 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jinzhu/copier"
-	pkgErrors "order_api_cart/pkg/errors"
+	pkgErr "order_api_cart/pkg/errors"
 )
 
 func GenerateSessionID() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		return "", fmt.Errorf("%w %v", pkgErrors.ErrGeneratingSessionID, err)
+		return "", fmt.Errorf("%w %v", pkgErr.ErrServiceUnavailable, err)
 	}
 	return hex.EncodeToString(bytes), nil
 }
