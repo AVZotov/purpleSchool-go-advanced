@@ -128,3 +128,22 @@ func (r *Repository) getUserByPhone(ctx context.Context, user *models.User, phon
 
 	return nil
 }
+
+func (r *Repository) findAllOrders(ctx context.Context, orders *[]models.Order, userID uint64) error {
+	err := r.DB.
+		Preload("Products").
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(orders).Error
+	if err != nil {
+		pkgLogger.ErrorWithRequestID(ctx, pkgErr.ErrQueryFailed.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+		return pkgErr.ErrQueryFailed
+	}
+	pkgLogger.InfoWithRequestID(ctx, "User orders retrieved", logrus.Fields{
+		"user_id":      userID,
+		"orders_count": len(*orders),
+	})
+	return nil
+}

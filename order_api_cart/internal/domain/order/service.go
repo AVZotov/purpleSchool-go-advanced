@@ -69,6 +69,36 @@ func (s *Service) FindOrderByIDAndUserID(ctx context.Context, orderID uint64) (*
 	return buildOrderResponse(&order, &user, order.Products), nil
 }
 
+func (s *Service) FindAllOrders(ctx context.Context) (*[]Response, error) {
+	phone, err := parsePhone(ctx)
+	if err != nil {
+		pkgLogger.ErrorWithRequestID(ctx, http.StatusText(http.StatusBadRequest),
+			logrus.Fields{
+				"error": err,
+			})
+		return nil, err
+	}
+
+	var user models.User
+	if err = s.Repository.getUserByPhone(ctx, &user, phone); err != nil {
+		return nil, err
+	}
+
+	var orders []models.Order
+	if err = s.Repository.findAllOrders(ctx, &orders, uint64(user.ID)); err != nil {
+		return nil, err
+	}
+
+	responses := make([]Response, 0, len(orders))
+
+	for _, order := range orders {
+		response := buildOrderResponse(&order, &user, order.Products)
+		responses = append(responses, *response)
+	}
+
+	return &responses, nil
+}
+
 func parsePhone(ctx context.Context) (string, error) {
 	phoneInterface := ctx.Value(pkgCtx.CtxUserPhone)
 	phone, ok := phoneInterface.(string)

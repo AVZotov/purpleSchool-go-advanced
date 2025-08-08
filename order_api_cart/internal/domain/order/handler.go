@@ -92,5 +92,13 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getAll(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
+	resp, err := h.Service.FindAllOrders(ctx)
+	if err != nil {
+		h.WriteError(ctx, w, pkgErr.GetStatusCode(err), err)
+		return
+	}
+
+	h.WriteJSON(ctx, w, http.StatusOK, resp)
 }
