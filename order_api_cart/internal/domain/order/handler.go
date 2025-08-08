@@ -39,8 +39,9 @@ func (h *Handler) registerRoutes(mux *http.ServeMux) {
 	mux.Handle(fmt.Sprintf("GET %s/all", r.DomainOrderRoot),
 		authMW(http.HandlerFunc(h.getAll)))
 
-	mux.Handle("GET /my-orders",
-		authMW(http.HandlerFunc(h.getAll)))
+	mux.Handle("POST /order", authMW(http.HandlerFunc(h.new)))
+	mux.Handle("GET /order/{id}", authMW(http.HandlerFunc(h.getByID)))
+	mux.Handle("GET /my-orders", authMW(http.HandlerFunc(h.getAll)))
 }
 
 func (h *Handler) new(w http.ResponseWriter, r *http.Request) {
