@@ -4,7 +4,7 @@ type NewOrderRequest struct {
 	ProductIDs []uint `json:"product_ids" validate:"required,min=1,dive,required,min=1"`
 }
 
-type NewOrderResponse struct {
+type Response struct {
 	ID         uint             `json:"id"`
 	Phone      string           `json:"phone"`
 	Status     string           `json:"status"`

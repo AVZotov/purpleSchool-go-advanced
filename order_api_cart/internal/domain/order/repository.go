@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"order_api_cart/pkg/db"
@@ -91,6 +92,38 @@ func (r *Repository) createOrder(ctx context.Context, order *models.Order) error
 			"error": err.Error(),
 		})
 		return pkgErr.ErrTransactionFailed
+	}
+
+	return nil
+}
+
+func (r *Repository) findByOrderIDAndUserID(ctx context.Context, order *models.Order, orderID, userID uint64) error {
+	err := r.DB.
+		Preload("Products").
+		Where("id = ? AND user_id = ?", orderID, userID).
+		First(&order).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			pkgLogger.ErrorWithRequestID(ctx, "Failed to find order", logrus.Fields{
+				"error": err.Error(),
+			})
+			return pkgErr.ErrOrderNotFound
+		}
+		pkgLogger.ErrorWithRequestID(ctx, "Failed to find order", logrus.Fields{
+			"error": err.Error(),
+		})
+		return pkgErr.ErrQueryFailed
+	}
+
+	return nil
+}
+
+func (r *Repository) getUserByPhone(ctx context.Context, user *models.User, phone string) error {
+	if err := r.DB.FindBy(user, "phone = ?", phone); err != nil {
+		pkgLogger.ErrorWithRequestID(ctx, pkgErr.ErrUserNotFound.Error(), logrus.Fields{
+			"error": err.Error(),
+		})
+		return pkgErr.ErrUserNotFound
 	}
 
 	return nil

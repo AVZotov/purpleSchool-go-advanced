@@ -5,3 +5,7 @@ const (
 	RequestIPHeader     = "X-Forwarded-For"
 	AuthorizationHeader = "Authorization"
 )
+
+const (
+	OrderIDQuery = "order_id"
+)
