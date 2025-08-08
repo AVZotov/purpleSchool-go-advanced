@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"order_api_cart/internal/config"
 	"order_api_cart/internal/domain/auth"
 	"order_api_cart/internal/domain/order"
-	"order_api_cart/internal/http/server"
 	"order_api_cart/pkg/db"
 	"order_api_cart/pkg/db/migrations"
 	pkgLogger "order_api_cart/pkg/logger"
 	mw "order_api_cart/pkg/middleware"
 	pkgValidator "order_api_cart/pkg/validator"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -71,8 +75,44 @@ func main() {
 
 	handler := addPkgMiddleware(mux)
 
-	srv := server.New(cfg.HttpServer.Port, handler)
-	_ = srv.ListenAndServe()
+	srv := &http.Server{
+		Addr:    ":" + cfg.HttpServer.Port,
+		Handler: handler,
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"port": cfg.HttpServer.Port,
+		}).Info("Starting HTTP server")
+
+		if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			pkgLogger.Logger.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Fatal("Server failed to start")
+		}
+	}()
+	pkgLogger.Logger.Info("Server started. Press Ctrl+C to shutdown.")
+
+	<-quit
+
+	pkgLogger.Logger.Info("Closing container resources...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err = srv.Shutdown(ctx); err != nil {
+		pkgLogger.Logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("Server forced to shutdown")
+	}
+
+	if sqlDB, err := dtb.DB.DB(); err == nil {
+		_ = sqlDB.Close()
+	}
+
+	pkgLogger.Logger.Info("Server exited gracefully")
 }
 
 func registerHandlers(mux *http.ServeMux, cfg *config.Config, dtb *db.DB) {
