@@ -1,0 +1,21 @@
+env: "dev"
+
+http_server:
+  schema: "http"
+  host: "localhost"
+  port: "8081"
+  address: "http://localhost:8081"
+  timeout: 4s
+  idle_timeout: 60s
+
+data_base:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "my_pass"
+  name: "order_api_cart"
+  ssl_mode: "disable"
+  db_volume: "./data"
+
+jwt:
+  secret: "b2539d357654260f15a334ad3a6f4ea0"
